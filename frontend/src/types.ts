@@ -11,3 +11,61 @@ export type StopDish = {
   name: string;
   portions: number;
 };
+
+export type Dish = {
+  id: string;
+  name: string;
+  price: number;
+  portions: number; // 0 = стоп-лист
+};
+
+export type Batch = {
+  id: string;
+  product_id: string;
+  product: string;
+  unit: string;
+  delivery_number: string;
+  initial_quantity: number;
+  remaining_quantity: number;
+  received_at: string;
+  expires_at: string;
+  hours_left: number;
+  expired: boolean;
+};
+
+export type WriteOff = {
+  product_id: string;
+  product: string;
+  unit: string;
+  batch_id: string;
+  quantity: number;
+  expires_at: string;
+};
+
+export type Shortage = {
+  product_id: string;
+  product: string;
+  unit: string;
+  needed: number;
+  available: number;
+};
+
+export type OrderResult = {
+  id: string;
+  number: number;
+  status: 'created' | 'rejected';
+  reason?: string;
+  created_at: string;
+  items: { dish_id: string; name: string; quantity: number }[];
+  write_offs?: WriteOff[];
+  shortages?: Shortage[];
+};
+
+export type OrderHistoryEntry = {
+  id: string;
+  number: number;
+  status: 'created' | 'rejected';
+  reason?: string;
+  created_at: string;
+  items: { name: string; quantity: number }[];
+};
