@@ -13,6 +13,7 @@ import (
     "github.com/joho/godotenv"
 
     "github.com/IIgiyuuII/restaurant/backend/internal/db"
+    "github.com/IIgiyuuII/restaurant/backend/internal/handlers"
 )
 
 func main() {
@@ -91,9 +92,12 @@ func main() {
         writeJSON(w, out)
     })
 
+    // Поставки, заказы (FEFO), меню
+    handlers.New(pool).Mount(r)
+
     port := os.Getenv("PORT")
     if port == "" {
-        port = "8080"
+        port = "8081"
     }
     log.Println("listening on :" + port)
     log.Fatal(http.ListenAndServe(":"+port, r))
