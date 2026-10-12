@@ -1,22 +1,25 @@
 import { useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import axios from 'axios';
 
 import { api, errorMessage } from '../api';
-import type { Dish, OrderHistoryEntry, OrderResult } from '../types';
+import type { Cart, Dish, OrderHistoryEntry, OrderResult } from '../types';
 import { formatDate, formatMoney, plural } from '../utils';
 import OrderResultCard from './OrderResultCard';
 
 type Props = {
   dishes: Dish[];
   history: OrderHistoryEntry[];
+  /** Корзина живёт в App, чтобы не терялась при переключении вкладок. */
+  cart: Cart;
+  setCart: Dispatch<SetStateAction<Cart>>;
   /** Вызывается после любого ответа сервера — чтобы обновить остатки и стоп-лист. */
   onChanged: () => Promise<void>;
 };
 
 const MAX_PER_DISH = 100;
 
-export default function OrdersPage({ dishes, history, onChanged }: Props) {
-  const [cart, setCart] = useState<Record<string, number>>({});
+export default function OrdersPage({ dishes, history, cart, setCart, onChanged }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<OrderResult | null>(null);
   const [error, setError] = useState<string | null>(null);

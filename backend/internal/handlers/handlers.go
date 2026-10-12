@@ -21,6 +21,7 @@ type API struct {
 	pool       *pgxpool.Pool
 	deliveries *services.DeliveryService
 	orders     *services.OrderService
+	hotOffers  *services.HotOffersService
 }
 
 func New(pool *pgxpool.Pool) *API {
@@ -28,6 +29,7 @@ func New(pool *pgxpool.Pool) *API {
 		pool:       pool,
 		deliveries: services.NewDeliveryService(pool),
 		orders:     services.NewOrderService(pool),
+		hotOffers:  services.NewHotOffersService(pool),
 	}
 }
 
@@ -38,6 +40,7 @@ func (a *API) Mount(r chi.Router) {
 	r.Get("/api/dishes", a.listDishes)
 	r.Get("/api/batches", a.listBatches)
 	r.Get("/api/orders", a.listOrders)
+	r.Get("/api/hot-offers", a.listHotOffers)
 }
 
 func (a *API) createDelivery(w http.ResponseWriter, r *http.Request) {
@@ -183,6 +186,21 @@ func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// listHotOffers — блюда, продажу которых стоит стимулировать, с объяснением причин.
+// ?limit=N (по умолчанию 10, максимум 50).
+func (a *API) listHotOffers(w http.ResponseWriter, r *http.Request) {
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	offers, err := a.hotOffers.List(r.Context(), limit)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	if offers == nil {
+		offers = []models.HotOffer{}
+	}
+	writeJSON(w, http.StatusOK, offers)
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {

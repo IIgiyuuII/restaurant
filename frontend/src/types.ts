@@ -69,3 +69,31 @@ export type OrderHistoryEntry = {
   created_at: string;
   items: { name: string; quantity: number }[];
 };
+
+export type HotReason = {
+  product_id: string;
+  product: string;
+  unit: string;
+  batch_id: string;
+  quantity: number;
+  expires_at: string;
+  hours_left: number;
+  urgency: number;
+  coverage_pct: number;
+  points: number;
+  text: string;
+};
+
+export type HotOffer = {
+  dish_id: string;
+  name: string;
+  price: number;
+  portions: number;
+  score: number;
+  level: 'critical' | 'high' | 'medium';
+  hours_left: number;
+  summary: string;
+  reasons: HotReason[];
+};
+
+export type Cart = Record<string, number>;
