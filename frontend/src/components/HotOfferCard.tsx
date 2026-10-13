@@ -8,7 +8,6 @@ type Props = {
   topScore: number;
   inCart: number;
   onAdd: () => void;
-  /** Компактный вид для дашборда: только главная причина. */
   compact?: boolean;
 };
 
@@ -39,15 +38,17 @@ export default function HotOfferCard({ offer, rank, topScore, inCart, onAdd, com
   const reasons = compact ? offer.reasons.slice(0, 1) : offer.reasons;
 
   return (
-    <div className={'rounded-xl border bg-[#0d1220] p-5 ' + lvl.border}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
+    <div className={'rounded-xl border bg-[#0d1220] p-4 sm:p-5 ' + lvl.border}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
           <div className="shrink-0 w-7 h-7 rounded-full bg-gray-800 text-gray-300 text-xs flex items-center justify-center font-mono">
             {rank}
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium text-gray-100 text-lg">{offer.name}</span>
+              <span className="font-medium text-gray-100 text-base sm:text-lg break-words">
+                {offer.name}
+              </span>
               <span className={'inline-flex px-2 py-0.5 rounded-md text-xs ' + lvl.badge}>
                 {lvl.label}
               </span>
@@ -76,17 +77,19 @@ export default function HotOfferCard({ offer, rank, topScore, inCart, onAdd, com
             key={r.batch_id}
             className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm rounded-lg bg-black/20 px-3 py-2"
           >
-            <span className="text-gray-300 flex-1 min-w-60">{r.text}</span>
+            <span className="text-gray-300 flex-1 min-w-0 break-words">
+              {r.text}
+            </span>
             <ExpiryBadge expiry={r.expires_at} />
           </li>
         ))}
       </ul>
 
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
           onClick={onAdd}
           disabled={inCart >= offer.portions}
-          className="rounded-lg bg-emerald-500 hover:bg-emerald-400 text-gray-950 text-sm font-medium px-4 py-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto rounded-lg bg-emerald-500 hover:bg-emerald-400 text-gray-950 text-sm font-medium px-4 py-2.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           + В заказ
         </button>

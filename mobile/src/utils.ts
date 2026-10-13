@@ -1,4 +1,4 @@
-import type { Tone } from './theme';
+import type { Tone } from './theme.ts';
 
 export function formatQuantity(value: number): string {
   if (Number.isInteger(value)) return value.toString();

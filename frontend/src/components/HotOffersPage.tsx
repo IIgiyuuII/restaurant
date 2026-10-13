@@ -13,7 +13,7 @@ export default function HotOffersPage({ offers, cart, onAdd, onOpenOrders }: Pro
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="w-full min-w-0 space-y-6">
       <details className="rounded-xl border border-gray-800 bg-[#0d1220] px-5 py-3 text-sm text-gray-400">
         <summary className="cursor-pointer text-gray-300">Как считается приоритет?</summary>
         <div className="mt-3 space-y-2 leading-relaxed">
@@ -42,7 +42,7 @@ export default function HotOffersPage({ offers, cart, onAdd, onOpenOrders }: Pro
       </details>
 
       {cartCount > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-emerald-800/50 bg-emerald-950/20 px-5 py-3">
+       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-800/50 bg-emerald-950/20 px-4 sm:px-5 py-3">
           <span className="text-sm text-emerald-300">В заказе порций: {cartCount}</span>
           <button
             onClick={onOpenOrders}
@@ -58,18 +58,19 @@ export default function HotOffersPage({ offers, cart, onAdd, onOpenOrders }: Pro
           Горячих предложений нет — срок годности продуктов не поджимает 🎉
         </div>
       ) : (
-        <div className="space-y-4">
-          {offers.map((o, i) => (
-            <HotOfferCard
-              key={o.dish_id}
-              offer={o}
-              rank={i + 1}
-              topScore={topScore}
-              inCart={cart[o.dish_id] ?? 0}
-              onAdd={() => onAdd(o)}
-            />
-          ))}
-        </div>
+        
+      <div className="grid w-full min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+        {offers.map((o, i) => (
+          <HotOfferCard
+            key={o.dish_id}
+            offer={o}
+            rank={i + 1}
+            topScore={topScore}
+            inCart={cart[o.dish_id] ?? 0}
+            onAdd={() => onAdd(o)}
+          />
+        ))}
+      </div>
       )}
     </div>
   );
