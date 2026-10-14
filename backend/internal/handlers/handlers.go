@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -22,14 +23,19 @@ type API struct {
 	deliveries *services.DeliveryService
 	orders     *services.OrderService
 	hotOffers  *services.HotOffersService
+	restock    *services.RestockService
+	expiry     *services.ExpiryService
 }
 
-func New(pool *pgxpool.Pool) *API {
+// New: expiry создаётся в main, потому что тот же экземпляр запускает фоновое автосписание.
+func New(pool *pgxpool.Pool, expiry *services.ExpiryService) *API {
 	return &API{
 		pool:       pool,
 		deliveries: services.NewDeliveryService(pool),
 		orders:     services.NewOrderService(pool),
 		hotOffers:  services.NewHotOffersService(pool),
+		restock:    services.NewRestockService(pool),
+		expiry:     expiry,
 	}
 }
 
@@ -41,6 +47,9 @@ func (a *API) Mount(r chi.Router) {
 	r.Get("/api/batches", a.listBatches)
 	r.Get("/api/orders", a.listOrders)
 	r.Get("/api/hot-offers", a.listHotOffers)
+	r.Get("/api/restock", a.listRestock)
+	r.Get("/api/writeoffs", a.expiryReport)
+	r.Post("/api/writeoffs", a.writeOffExpired)
 }
 
 func (a *API) createDelivery(w http.ResponseWriter, r *http.Request) {
@@ -201,6 +210,44 @@ func (a *API) listHotOffers(w http.ResponseWriter, r *http.Request) {
 		offers = []models.HotOffer{}
 	}
 	writeJSON(w, http.StatusOK, offers)
+}
+
+// listRestock — что пора заказывать: отсутствующие и заканчивающиеся продукты с рекомендацией.
+func (a *API) listRestock(w http.ResponseWriter, r *http.Request) {
+	items, err := a.restock.List(r.Context())
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+// expiryReport — аналитика списаний просрочки: ?days=N (по умолчанию 30, максимум 365).
+func (a *API) expiryReport(w http.ResponseWriter, r *http.Request) {
+	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
+	rep, err := a.expiry.Report(r.Context(), days)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, rep)
+}
+
+// writeOffExpired — списать просроченные партии. Тело необязательно:
+// {"batch_ids": [...]} — только указанные, пустое тело — все просроченные.
+func (a *API) writeOffExpired(w http.ResponseWriter, r *http.Request) {
+	var req models.ExpiryWriteOffRequest
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "некорректный JSON: "+err.Error())
+		return
+	}
+	res, err := a.expiry.WriteOffExpired(r.Context(), req.BatchIDs)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, res)
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {

@@ -6,6 +6,8 @@ import (
     "log"
     "net/http"
     "os"
+    "strings"
+    "time"
 
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
@@ -14,6 +16,7 @@ import (
 
     "github.com/IIgiyuuII/restaurant/backend/internal/db"
     "github.com/IIgiyuuII/restaurant/backend/internal/handlers"
+    "github.com/IIgiyuuII/restaurant/backend/internal/services"
 )
 
 func main() {
@@ -92,8 +95,12 @@ func main() {
         writeJSON(w, out)
     })
 
-    // Поставки, заказы (FEFO), меню
-    handlers.New(pool).Mount(r)
+    // Списание просрочки: фоновая проверка + ручное списание через API.
+    expiry := services.NewExpiryService(pool, autoWriteOffInterval())
+    go expiry.RunAutoWriteOff(ctx)
+
+    // Поставки, заказы (FEFO), меню, горячие предложения, пополнение, списания
+    handlers.New(pool, expiry).Mount(r)
 
     port := os.Getenv("PORT")
     if port == "" {
@@ -101,6 +108,25 @@ func main() {
     }
     log.Println("listening on :" + port)
     log.Fatal(http.ListenAndServe(":"+port, r))
+}
+
+// autoWriteOffInterval читает AUTO_WRITEOFF_INTERVAL (например "15m", "1h").
+// Пусто — по умолчанию 15 минут; "0" или "off" — автосписание выключено.
+// Меньше минуты не принимаем: сроки годности считаются в часах, проверять чаще незачем.
+func autoWriteOffInterval() time.Duration {
+    v := strings.ToLower(strings.TrimSpace(os.Getenv("AUTO_WRITEOFF_INTERVAL")))
+    switch v {
+    case "":
+        return services.DefaultAutoWriteOff
+    case "0", "off", "false", "no":
+        return 0
+    }
+    d, err := time.ParseDuration(v)
+    if err != nil || d < time.Minute {
+        log.Printf("AUTO_WRITEOFF_INTERVAL=%q некорректен (нужно, например, 15m или 1h), беру %s", v, services.DefaultAutoWriteOff)
+        return services.DefaultAutoWriteOff
+    }
+    return d
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

@@ -97,3 +97,69 @@ export type HotOffer = {
 };
 
 export type Cart = Record<string, number>;
+
+// ---- Приём поставки и рекомендации по пополнению ----
+
+export type RestockItem = {
+  product_id: string;
+  name: string;
+  unit: string;
+  min_stock: number;
+  quantity: number;
+  status: 'out' | 'low'; // out — нет совсем, low — ниже минимума
+  suggested_quantity: number;
+  blocked_dishes: number;
+};
+
+export type DeliveryBatch = {
+  id: string;
+  product_id: string;
+  product: string;
+  unit: string;
+  quantity: number;
+  shelf_life_hours: number;
+  received_at: string;
+  expires_at: string;
+};
+
+export type DeliveryResult = {
+  id: string;
+  number: string;
+  delivery_date: string;
+  created_at: string;
+  batches: DeliveryBatch[];
+};
+
+// ---- Списание просрочки и аналитика ----
+
+export type ExpiryStat = {
+  product_id: string;
+  name: string;
+  unit: string;
+  batches: number;
+  quantity: number;
+};
+
+export type ExpiryRecord = {
+  id: number;
+  created_at: string;
+  product_id: string;
+  product: string;
+  unit: string;
+  quantity: number;
+  delivery_number: string;
+  expires_at: string;
+};
+
+export type ExpiryReport = {
+  days: number;
+  total_batches: number;
+  by_product: ExpiryStat[];
+  recent: ExpiryRecord[];
+  auto_check_minutes: number; // 0 — автосписание выключено
+};
+
+export type ExpiryWriteOffResult = {
+  written_off: number;
+  items: { batch_id: string; product_id: string; product: string; unit: string; quantity: number }[];
+};
