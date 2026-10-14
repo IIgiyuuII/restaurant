@@ -58,7 +58,7 @@ export default function WriteoffsPage({ batches, report, onChanged }: Props) {
   return (
     <div className="space-y-8">
       {report && (
-        <div className="rounded-xl border border-gray-800 bg-[#0d1220] px-4 py-3 text-sm text-gray-400">
+        <div className="rounded-2xl border border-gray-800 bg-surface px-4 py-3 text-sm text-gray-400">
           {report.auto_check_minutes > 0 ? (
             <>
               ⏱ Сервер сам списывает просрочку раз в{' '}
@@ -74,12 +74,12 @@ export default function WriteoffsPage({ batches, report, onChanged }: Props) {
       {/* К списанию */}
       <section>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm uppercase tracking-wide text-gray-500">К списанию</h2>
+          <h2 className="text-base font-semibold text-gray-100">К списанию</h2>
           {pending.length > 1 && (
             <button
               onClick={() => writeOff()}
               disabled={busy}
-              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-gray-950 transition-colors hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {busy ? 'Списываем…' : `Списать всё (${pending.length})`}
             </button>
@@ -98,11 +98,11 @@ export default function WriteoffsPage({ batches, report, onChanged }: Props) {
         )}
 
         {pending.length === 0 ? (
-          <div className="rounded-xl border border-emerald-800/40 bg-emerald-950/20 p-5 text-emerald-300">
+          <div className="rounded-2xl border border-emerald-800/40 bg-emerald-950/20 p-5 text-emerald-300">
             Просроченных партий нет 🎉
           </div>
         ) : (
-          <ul className="divide-y divide-gray-900 rounded-xl border border-red-900/40 bg-red-950/10">
+          <ul className="divide-y divide-gray-900 rounded-2xl border border-red-900/40 bg-red-950/10">
             {pending.map((b) => (
               <li key={b.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
@@ -135,35 +135,35 @@ export default function WriteoffsPage({ batches, report, onChanged }: Props) {
 
       {/* Аналитика */}
       <section>
-        <h2 className="mb-3 text-sm uppercase tracking-wide text-gray-500">
+        <h2 className="mb-3 text-base font-semibold text-gray-100">
           Аналитика списаний{report ? ` · за ${report.days} дн.` : ''}
         </h2>
 
         {!report ? (
           <div className="text-gray-500">Загрузка…</div>
         ) : report.total_batches === 0 ? (
-          <div className="rounded-xl border border-gray-800 bg-[#0d1220] p-6 text-gray-400">
+          <div className="rounded-2xl border border-gray-800 bg-surface p-6 text-gray-400">
             За {report.days} дн. списаний не было — данные появятся после первого списания.
           </div>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <StatCard label="Списано партий" value={report.total_batches} accent="red" />
-              <StatCard label="Продуктов затронуто" value={report.by_product.length} accent="yellow" />
+              <StatCard label="Списано партий" value={report.total_batches} accent="red" icon="trash" />
+              <StatCard label="Продуктов затронуто" value={report.by_product.length} accent="yellow" icon="box" />
               {top && (
                 <div className="col-span-2 sm:col-span-1">
                   <StatCard
                     label="Больше всего теряем"
                     value={top.name}
                     hint={`${top.batches} ${plural(top.batches, BATCH_FORMS)} · ${formatQty(top.quantity, top.unit)}`}
-                    accent="gray"
+                    accent="neutral" icon="flame"
                   />
                 </div>
               )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <div className="rounded-xl border border-gray-800 bg-[#0d1220] p-4 sm:p-5">
+              <div className="rounded-2xl border border-gray-800 bg-surface p-4 sm:p-5">
                 <div className="mb-4 text-xs uppercase tracking-wide text-gray-500">
                   Доля продуктов в списаниях (по числу партий)
                 </div>
@@ -175,10 +175,10 @@ export default function WriteoffsPage({ batches, report, onChanged }: Props) {
                 />
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-gray-800 bg-[#0d1220]">
+              <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-surface">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-800 text-left text-xs uppercase tracking-wide text-gray-500">
+                    <tr className="text-left text-xs text-gray-500 bg-inset">
                       <th className="px-4 py-3 font-medium">Продукт</th>
                       <th className="px-4 py-3 text-right font-medium">Партий</th>
                       <th className="px-4 py-3 text-right font-medium">Списано</th>
@@ -205,11 +205,11 @@ export default function WriteoffsPage({ batches, report, onChanged }: Props) {
       {/* История */}
       {report && report.recent.length > 0 && (
         <section>
-          <h2 className="mb-3 text-sm uppercase tracking-wide text-gray-500">Последние списания</h2>
-          <div className="overflow-x-auto rounded-xl border border-gray-800 bg-[#0d1220]">
+          <h2 className="mb-3 text-base font-semibold text-gray-100">Последние списания</h2>
+          <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-surface">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-800 text-left text-xs uppercase tracking-wide text-gray-500">
+                <tr className="text-left text-xs text-gray-500 bg-inset">
                   <th className="px-4 py-3 font-medium">Списано</th>
                   <th className="px-4 py-3 font-medium">Продукт</th>
                   <th className="px-4 py-3 text-right font-medium">Количество</th>

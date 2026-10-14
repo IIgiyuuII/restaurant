@@ -31,10 +31,10 @@ export default function StockTable({ products, batches }: Props) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-800 bg-[#0d1220]">
+    <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-surface">
       <table className="w-full min-w-[680px] text-sm">
         <thead>
-          <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+          <tr className="text-left text-xs text-gray-500 bg-inset">
             <th className="px-4 py-3 font-medium">Продукт</th>
             <th className="px-4 py-3 font-medium text-right">Остаток</th>
             <th className="px-4 py-3 font-medium">Ед.</th>
@@ -54,7 +54,7 @@ export default function StockTable({ products, batches }: Props) {
                 <tr
                   onClick={() => list.length > 0 && toggle(p.id)}
                   className={
-                    'border-b border-gray-900 hover:bg-white/[0.02] ' +
+                    'border-b border-gray-900 hover:bg-hover ' +
                     (list.length > 0 ? 'cursor-pointer' : '')
                   }
                 >
@@ -90,7 +90,7 @@ export default function StockTable({ products, batches }: Props) {
                 </tr>
 
                 {isOpen && (
-                  <tr className="border-b border-gray-900 bg-black/20">
+                  <tr className="border-b border-gray-900 bg-inset">
                     <td colSpan={6} className="px-4 py-3">
                       <div className="overflow-x-auto">
                         <BatchList batches={list} />
@@ -136,7 +136,7 @@ function BatchList({ batches }: { batches: Batch[] }) {
                 <div className="flex items-center gap-2">
                   <div className="h-1.5 w-24 rounded-full bg-gray-800 overflow-hidden">
                     <div
-                      className={'h-full ' + (b.expired ? 'bg-red-500' : 'bg-emerald-500')}
+                      className={'h-full ' + (b.expired ? 'bg-red-500' : 'bg-accent')}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

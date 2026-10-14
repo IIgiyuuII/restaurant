@@ -66,7 +66,7 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 items-start">
         {/* Меню */}
         <section>
-          <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Меню</h2>
+          <h2 className="text-base font-semibold text-gray-100 mb-3">Меню</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
             {dishes.map((d) => {
               const qty = qtyOf(d);
@@ -75,12 +75,12 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
                 <div
                   key={d.id}
                   className={
-                    'rounded-xl border p-4 transition-colors ' +
+                    'rounded-2xl border p-4 transition-colors ' +
                     (stopped
-                      ? 'border-gray-800 bg-[#0d1220]/50 opacity-60'
+                      ? 'border-gray-800 bg-surface/50 opacity-60'
                       : qty > 0
-                        ? 'border-emerald-700/60 bg-emerald-950/10'
-                        : 'border-gray-800 bg-[#0d1220]')
+                        ? 'border-accent/50 bg-accent-soft'
+                        : 'border-gray-800 bg-surface')
                   }
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -102,7 +102,7 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
                     <button
                       onClick={() => change(d, -1)}
                       disabled={stopped || qty === 0}
-                      className="w-8 h-8 rounded-lg border border-gray-700 text-gray-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="w-8 h-8 rounded-lg border border-gray-700 text-gray-300 hover:bg-hover disabled:opacity-30 disabled:cursor-not-allowed"
                       aria-label={`Убрать ${d.name}`}
                     >
                       −
@@ -111,7 +111,7 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
                     <button
                       onClick={() => change(d, 1)}
                       disabled={stopped || qty >= d.portions}
-                      className="w-8 h-8 rounded-lg border border-gray-700 text-gray-300 hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="w-8 h-8 rounded-lg border border-gray-700 text-gray-300 hover:bg-hover disabled:opacity-30 disabled:cursor-not-allowed"
                       aria-label={`Добавить ${d.name}`}
                     >
                       +
@@ -124,8 +124,8 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
         </section>
 
         {/* Корзина */}
-        <aside className="rounded-xl border border-gray-800 bg-[#0d1220] p-5 xl:sticky xl:top-0">
-          <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Заказ</h2>
+        <aside className="rounded-2xl border border-gray-800 bg-surface p-5 xl:sticky xl:top-0">
+          <h2 className="text-base font-semibold text-gray-100 mb-3">Заказ</h2>
 
           {lines.length === 0 ? (
             <div className="text-sm text-gray-500 py-6 text-center">
@@ -154,7 +154,7 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
           <button
             onClick={submit}
             disabled={lines.length === 0 || submitting}
-            className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-medium py-2.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-accent hover:bg-accent-hover text-white shadow-md shadow-indigo-500/25 font-medium py-2.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {submitting ? 'Оформляем…' : 'Оформить заказ'}
           </button>
@@ -179,14 +179,14 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
 
       {/* История */}
       <section>
-        <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Последние заказы</h2>
+        <h2 className="text-base font-semibold text-gray-100 mb-3">Последние заказы</h2>
         {history.length === 0 ? (
           <div className="text-sm text-gray-500">Заказов пока нет</div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-gray-800 bg-[#0d1220]">
+          <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-surface">
             <table className="w-full min-w-[520px] text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+                <tr className="text-left text-xs text-gray-500 bg-inset">
                   <th className="px-4 py-3 font-medium">№</th>
                   <th className="px-4 py-3 font-medium">Время</th>
                   <th className="px-4 py-3 font-medium">Состав</th>

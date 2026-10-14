@@ -11,6 +11,9 @@ import HotOfferCard from './components/HotOfferCard';
 import DeliveryPage from './components/DeliveryPage';
 import WriteoffsPage from './components/WriteoffsPage';
 import DonutChart from './components/DonutChart';
+import Background from './components/Background';
+import ErrorBanner from './components/ErrorBanner';
+import SectionTitle from './components/SectionTitle';
 
 import { api, errorMessage } from './api';
 import type {
@@ -116,6 +119,7 @@ export default function App() {
 
   return (
     <div className="flex h-dvh overflow-hidden">
+      <Background />
       <Sidebar
         active={tab}
         onChange={selectTab}
@@ -131,112 +135,108 @@ export default function App() {
           onMenu={() => setMenuOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main className="flex-1 overflow-y-auto p-4 pt-5 md:p-8 md:pt-6">
           {!loaded && !error && <div className="text-gray-500">Загрузка…</div>}
 
           {error && (
-            <div className="mb-6 rounded-lg border border-red-800 bg-red-950/40 text-red-300 p-4">
-              Ошибка: {error}. Проверь, что Go-сервер запущен на порту 8081.
-            </div>
+            <ErrorBanner message={error} onRetry={() => void refresh()} onClose={() => setError(null)} />
           )}
 
           {loaded && tab === 'dashboard' && (
             <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <StatCard label="Продуктов" value={products.length} accent="gray" />
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+                <StatCard
+                  label="Продуктов"
+                  value={products.length}
+                  hint="всего в наличии"
+                  accent="neutral"
+                  icon="box"
+                  onClick={() => setTab('stock')}
+                />
                 <StatCard
                   label="Нет в наличии"
                   value={emptyProducts}
-                  accent={emptyProducts > 0 ? 'red' : 'emerald'}
                   hint="партий нет или закончились"
+                  accent={emptyProducts > 0 ? 'slate' : 'green'}
+                  icon="ban"
+                  onClick={() => setTab('stock')}
                 />
                 <StatCard
                   label="Партий истекает <24ч"
                   value={expiringSoon}
-                  accent={expiringSoon > 0 ? 'yellow' : 'emerald'}
                   hint={
                     expired > 0
                       ? `и ещё ${expired} просрочено — нужно списать`
                       : 'нужно срочно использовать'
                   }
+                  accent={expiringSoon > 0 ? 'orange' : 'green'}
+                  icon="clock"
+                  onClick={() => setTab(expired > 0 ? 'writeoffs' : 'stock')}
                 />
                 <StatCard
                   label="В стоп-листе"
                   value={stoplist.length}
-                  accent={stoplist.length > 0 ? 'red' : 'emerald'}
+                  hint="позиций"
+                  accent={stoplist.length > 0 ? 'indigo' : 'green'}
+                  icon="flame"
+                  onClick={() => setTab('stoplist')}
                 />
               </div>
 
               {hotOffers.length > 0 && (
                 <section>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm uppercase tracking-wide text-gray-500">
-                      Горячие предложения
-                    </h2>
-                    <button
-                      onClick={() => setTab('hot')}
-                      className="text-sm text-emerald-400 hover:text-emerald-300"
-                    >
-                      Все предложения →
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                  <SectionTitle icon="flame" action={{ label: 'Все предложения', onClick: () => setTab('hot') }}>
+                    Горячие предложения
+                  </SectionTitle>
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
                     {hotOffers.slice(0, 3).map((o, i) => (
-                      <HotOfferCard
-                        key={o.dish_id}
-                        offer={o}
-                        rank={i + 1}
-                        topScore={hotOffers[0].score}
-                        inCart={cart[o.dish_id] ?? 0}
-                        onAdd={() => addToCart(o)}
-                        compact
-                      />
+                      // Третья карточка — только на очень широких экранах, чтобы сетка из 2 колонок не оставляла дыру.
+                      <div key={o.dish_id} className={i === 2 ? 'hidden 2xl:contents' : 'contents'}>
+                        <HotOfferCard
+                          offer={o}
+                          rank={i + 1}
+                          topScore={hotOffers[0].score}
+                          inCart={cart[o.dish_id] ?? 0}
+                          onAdd={() => addToCart(o)}
+                          compact
+                        />
+                      </div>
                     ))}
                   </div>
                 </section>
               )}
 
-              <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
-                <section>
-                  <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-3">
-                    Стоп-лист
-                  </h2>
-                  <StopList dishes={stoplist} />
-                </section>
-
-                <section>
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm uppercase tracking-wide text-gray-500">
-                      Списания за {report?.days ?? 30} дн.
-                    </h2>
-                    <button
-                      onClick={() => setTab('writeoffs')}
-                      className="text-sm text-emerald-400 hover:text-emerald-300"
-                    >
-                      Подробнее →
-                    </button>
-                  </div>
-                  <div className="rounded-xl border border-gray-800 bg-[#0d1220] p-4 sm:p-5">
-                    {report && report.total_batches > 0 ? (
-                      <DonutChart
-                        slices={report.by_product.map((s) => ({ label: s.name, value: s.batches }))}
-                        centerValue={report.total_batches}
-                        centerLabel={plural(report.total_batches, ['партия', 'партии', 'партий'])}
-                        formatValue={(v) => `${v} ${plural(v, ['партия', 'партии', 'партий'])}`}
-                      />
-                    ) : (
-                      <div className="py-8 text-center text-sm text-gray-500">
-                        Просрочку не списывали — потерь нет 🎉
-                      </div>
-                    )}
-                  </div>
-                </section>
-              </div>
+              <section>
+                <StopList dishes={stoplist} compact onAll={() => setTab('stoplist')} />
+              </section>
 
               <section>
-                <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-3">
+                <SectionTitle
+                  icon="trash"
+                  action={{ label: 'Подробнее', onClick: () => setTab('writeoffs') }}
+                >
+                  Списания за {report?.days ?? 30} дн.
+                </SectionTitle>
+                <div className="bg-surface rounded-2xl border border-gray-800 p-4 sm:p-5">
+                  {report && report.total_batches > 0 ? (
+                    <DonutChart
+                      slices={report.by_product.map((s) => ({ label: s.name, value: s.batches }))}
+                      centerValue={report.total_batches}
+                      centerLabel={plural(report.total_batches, ['партия', 'партии', 'партий'])}
+                      formatValue={(v) => `${v} ${plural(v, ['партия', 'партии', 'партий'])}`}
+                    />
+                  ) : (
+                    <div className="py-8 text-center text-sm text-gray-500">
+                      Просрочку не списывали — потерь нет 🎉
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section>
+                <SectionTitle icon="box" action={{ label: 'Все остатки', onClick: () => setTab('stock') }}>
                   Остатки
-                </h2>
+                </SectionTitle>
                 <StockTable products={products} batches={batches} />
               </section>
             </div>

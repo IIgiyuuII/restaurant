@@ -14,7 +14,7 @@ export default function HotOffersPage({ offers, cart, onAdd, onOpenOrders }: Pro
 
   return (
     <div className="w-full min-w-0 space-y-6">
-      <details className="rounded-xl border border-gray-800 bg-[#0d1220] px-5 py-3 text-sm text-gray-400">
+      <details className="rounded-2xl border border-gray-800 bg-surface px-5 py-3 text-sm text-gray-400">
         <summary className="cursor-pointer text-gray-300">Как считается приоритет?</summary>
         <div className="mt-3 space-y-2 leading-relaxed">
           <p>
@@ -42,11 +42,11 @@ export default function HotOffersPage({ offers, cart, onAdd, onOpenOrders }: Pro
       </details>
 
       {cartCount > 0 && (
-       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-800/50 bg-emerald-950/20 px-4 sm:px-5 py-3">
-          <span className="text-sm text-emerald-300">В заказе порций: {cartCount}</span>
+       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-accent/30 bg-accent-soft px-4 sm:px-5 py-3">
+          <span className="text-sm font-medium text-accent-text">В заказе порций: {cartCount}</span>
           <button
             onClick={onOpenOrders}
-            className="text-sm text-emerald-300 hover:text-emerald-200 underline underline-offset-4"
+            className="text-sm text-accent-text hover:opacity-80 underline underline-offset-4"
           >
             Перейти к оформлению →
           </button>
@@ -54,12 +54,12 @@ export default function HotOffersPage({ offers, cart, onAdd, onOpenOrders }: Pro
       )}
 
       {offers.length === 0 ? (
-        <div className="rounded-xl border border-emerald-800/40 bg-emerald-950/20 p-6 text-emerald-300">
+        <div className="rounded-2xl border border-emerald-800/40 bg-emerald-950/20 p-6 text-emerald-300">
           Горячих предложений нет — срок годности продуктов не поджимает 🎉
         </div>
       ) : (
         
-      <div className="grid w-full min-w-0 grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+      <div className="grid w-full min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
         {offers.map((o, i) => (
           <HotOfferCard
             key={o.dish_id}

@@ -10,6 +10,10 @@ export type StopDish = {
   id: string;
   name: string;
   portions: number;
+  // Необязательные поля: если бэкенд их отдаёт, в таблице стоп-листа появятся колонки.
+  category?: string;
+  reason?: string;
+  stopped_at?: string;
 };
 
 export type Dish = {
@@ -94,6 +98,8 @@ export type HotOffer = {
   hours_left: number;
   summary: string;
   reasons: HotReason[];
+  /** Фото блюда (необязательно). Без него показывается плитка-заглушка. */
+  image_url?: string;
 };
 
 export type Cart = Record<string, number>;

@@ -13,7 +13,7 @@ type Props = {
   maxSlices?: number;
 };
 
-const COLORS = ['#34d399', '#fbbf24', '#f87171', '#60a5fa', '#a78bfa', '#f472b6', '#2dd4bf', '#fb923c'];
+const COLORS = ['#6366f1', '#f59e0b', '#f43f5e', '#38bdf8', '#a78bfa', '#ec4899', '#14b8a6', '#fb923c'];
 const OTHER_COLOR = '#6b7280';
 
 const SIZE = 200;
@@ -71,7 +71,7 @@ export default function DonutChart({
           aria-label={`${centerLabel}: ${centerValue}`}
           onMouseLeave={() => setActive(null)}
         >
-          <circle cx={CENTER} cy={CENTER} r={RADIUS} fill="none" stroke="#1f2937" strokeWidth={STROKE} />
+          <circle cx={CENTER} cy={CENTER} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-gray-800" />
           <g transform={`rotate(-90 ${CENTER} ${CENTER})`}>
             {segments.map((s) => (
               <circle
@@ -122,7 +122,7 @@ export default function DonutChart({
               onClick={() => setActive(active === i ? null : i)}
               className={
                 'flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors ' +
-                (active === i ? 'bg-white/5' : 'hover:bg-white/[0.03]')
+                (active === i ? 'bg-hover' : 'hover:bg-hover')
               }
             >
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorOf(i) }} />

@@ -10,7 +10,7 @@ export default function OrderResultCard({ result, onClose }: Props) {
   return (
     <div
       className={
-        'rounded-xl border p-5 ' +
+        'rounded-2xl border p-5 ' +
         (ok
           ? 'border-emerald-800/50 bg-emerald-950/20'
           : 'border-red-900/60 bg-red-950/20')
@@ -43,7 +43,7 @@ export default function OrderResultCard({ result, onClose }: Props) {
             {result.write_offs.map((w) => (
               <li
                 key={w.batch_id}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm rounded-lg bg-black/20 px-3 py-2"
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm rounded-lg bg-inset px-3 py-2"
               >
                 <span className="text-gray-200 min-w-32">{w.product}</span>
                 <span className="font-mono text-emerald-300">
@@ -68,7 +68,7 @@ export default function OrderResultCard({ result, onClose }: Props) {
             {(result.shortages ?? []).map((s) => (
               <li
                 key={s.product_id}
-                className="flex flex-wrap items-center gap-x-3 text-sm rounded-lg bg-black/20 px-3 py-2"
+                className="flex flex-wrap items-center gap-x-3 text-sm rounded-lg bg-inset px-3 py-2"
               >
                 <span className="text-gray-200 min-w-32">{s.product}</span>
                 <span className="text-gray-400">

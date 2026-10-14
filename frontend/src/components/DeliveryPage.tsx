@@ -21,7 +21,7 @@ type Row = {
 };
 
 const FIELD =
-  'rounded-lg border border-gray-700 bg-[#0b0f19] px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500 focus:outline-none';
+  'rounded-lg border border-gray-700 bg-field px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-accent focus:outline-none';
 const INPUT = FIELD + ' w-full';
 const LABEL_TEXT = 'text-xs uppercase tracking-wide text-gray-500';
 const LABEL = 'mb-1 block ' + LABEL_TEXT;
@@ -117,7 +117,7 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
       {result && (
         <div
           ref={resultRef}
-          className="scroll-mt-4 rounded-xl border border-emerald-800/50 bg-emerald-950/20 p-4 sm:p-5"
+          className="scroll-mt-4 rounded-2xl border border-emerald-800/50 bg-emerald-950/20 p-4 sm:p-5"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -136,7 +136,7 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
             {result.batches.map((b) => (
               <li
                 key={b.id}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-gray-800 bg-[#0d1220] px-3 py-2 text-sm"
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-gray-800 bg-surface px-3 py-2 text-sm"
               >
                 <span className="min-w-32 text-gray-200">{b.product}</span>
                 <span className="font-mono text-gray-300">{formatQty(b.quantity, b.unit)}</span>
@@ -152,9 +152,9 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
         {/* Форма поставки */}
         <section
           ref={formRef}
-          className="order-2 scroll-mt-4 rounded-xl border border-gray-800 bg-[#0d1220] p-4 sm:p-5 xl:order-1"
+          className="order-2 scroll-mt-4 rounded-2xl border border-gray-800 bg-surface p-4 sm:p-5 xl:order-1"
         >
-          <h2 className="mb-4 text-sm uppercase tracking-wide text-gray-500">Новая поставка</h2>
+          <h2 className="mb-4 text-base font-semibold text-gray-100">Новая поставка</h2>
 
           <div className="mb-5 max-w-sm">
             <label className={LABEL} htmlFor="delivery-number">
@@ -174,7 +174,7 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
             {rows.map((r, idx) => (
               <div
                 key={r.key}
-                className="grid grid-cols-1 gap-3 rounded-lg border border-gray-800 bg-black/20 p-3 sm:grid-cols-2"
+                className="grid grid-cols-1 gap-3 rounded-lg border border-gray-800 bg-inset p-3 sm:grid-cols-2"
               >
                 <div className="sm:col-span-2">
                   <div className="mb-1 flex items-center justify-between gap-3">
@@ -280,16 +280,16 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
           <button
             onClick={submit}
             disabled={submitting}
-            className="mt-4 w-full rounded-lg bg-emerald-500 py-2.5 font-medium text-gray-950 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:px-8"
+            className="mt-4 w-full rounded-lg bg-accent py-2.5 font-medium text-white shadow-md shadow-indigo-500/25 transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:px-8"
           >
             {submitting ? 'Принимаем…' : 'Принять поставку'}
           </button>
         </section>
 
         {/* Что нужно заказать */}
-        <aside className="order-1 rounded-xl border border-gray-800 bg-[#0d1220] p-4 sm:p-5 xl:order-2">
+        <aside className="order-1 rounded-2xl border border-gray-800 bg-surface p-4 sm:p-5 xl:order-2">
           <div className="mb-1 flex items-center justify-between gap-3">
-            <h2 className="text-sm uppercase tracking-wide text-gray-500">Что нужно заказать</h2>
+            <h2 className="text-base font-semibold text-gray-100">Что нужно заказать</h2>
             {restock.length > 0 && <span className="text-xs text-gray-500">{restock.length}</span>}
           </div>
           <p className="mb-4 text-xs text-gray-600">
@@ -318,7 +318,7 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
               />
               <button
                 onClick={addAllSuggestions}
-                className="mt-4 w-full rounded-lg border border-emerald-700/60 bg-emerald-950/20 py-2 text-sm text-emerald-300 hover:bg-emerald-950/40"
+                className="mt-4 w-full rounded-lg border border-accent/40 bg-accent-soft py-2 text-sm font-medium text-accent-text hover:bg-accent/25"
               >
                 Добавить все в поставку
               </button>
@@ -357,7 +357,7 @@ function RestockGroup({
         {items.map((it) => {
           const added = inForm(it.product_id);
           return (
-            <li key={it.product_id} className="rounded-lg border border-gray-800 bg-black/20 p-3">
+            <li key={it.product_id} className="rounded-lg border border-gray-800 bg-inset p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-gray-100">{it.name}</div>
@@ -375,7 +375,7 @@ function RestockGroup({
                 <button
                   onClick={() => onAdd(it)}
                   disabled={added}
-                  className="shrink-0 rounded-lg border border-gray-700 px-2.5 py-1 text-xs text-gray-300 hover:bg-white/5 disabled:cursor-default disabled:border-emerald-800 disabled:text-emerald-400 disabled:hover:bg-transparent"
+                  className="shrink-0 rounded-lg border border-gray-700 px-2.5 py-1 text-xs text-gray-300 hover:bg-hover disabled:cursor-default disabled:border-emerald-800 disabled:text-emerald-400 disabled:hover:bg-transparent"
                 >
                   {added ? '✓ в поставке' : '+ в поставку'}
                 </button>
