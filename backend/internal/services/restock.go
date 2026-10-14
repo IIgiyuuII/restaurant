@@ -53,15 +53,15 @@ func (s *RestockService) List(ctx context.Context) ([]models.RestockItem, error)
 		if err := rows.Scan(&it.ProductID, &it.Name, &it.Unit, &it.MinStock, &it.Quantity, &it.BlockedDishes); err != nil {
 			return nil, err
 		}
-		it.Status = restockStatus(it.Quantity)
+		it.Status = restockStatus(it.Quantity, it.BlockedDishes)
 		it.Suggested = suggestQuantity(it.Unit, it.MinStock, it.Quantity)
 		out = append(out, it)
 	}
 	return out, rows.Err()
 }
 
-func restockStatus(quantity float64) string {
-	if quantity <= 0 {
+func restockStatus(quantity float64, blockedDishes int) string {
+	if quantity <= 0 || blockedDishes > 0 {
 		return RestockOut
 	}
 	return RestockLow

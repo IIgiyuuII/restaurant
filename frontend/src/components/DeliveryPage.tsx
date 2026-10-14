@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, errorMessage } from '../api';
 import type { DeliveryResult, Product, RestockItem } from '../types';
@@ -26,7 +26,74 @@ const INPUT = FIELD + ' w-full';
 const LABEL_TEXT = 'text-xs uppercase tracking-wide text-gray-500';
 const LABEL = 'mb-1 block ' + LABEL_TEXT;
 
-// Ключи строк формы: счётчик живёт вне компонента, чтобы не читать ref во время рендера.
+// ---- Бизнес-лимиты ----
+/** Максимум количества по единице измерения продукта. */
+const MAX_QTY: Record<string, number> = {
+  g: 100_000, // 100 кг
+  ml: 100_000, // 100 л
+  pcs: 1_000, // 1000 штук
+};
+const DEFAULT_MAX_QTY = 100_000;
+const maxQtyFor = (unit: string): number => MAX_QTY[unit] ?? DEFAULT_MAX_QTY;
+
+/** Максимум срока хранения — 1 год. */
+const MAX_SHELF_HOURS = 24 * 365;
+const MAX_SHELF_DAYS = 365;
+
+/** true, если у числа не больше 3 знаков после запятой (хвостовые нули не считаются). */
+const hasAtMostThreeDecimals = (raw: string): boolean => {
+  const dot = raw.indexOf('.');
+  if (dot < 0) return true;
+  const frac = raw.slice(dot + 1).replace(/0+$/, '');
+  return frac.length <= 3;
+};
+
+/** Отбрасывает всё, что не цифры и не одна точка. */
+const sanitizeNumeric = (raw: string): string => {
+  let s = raw.replace(/[^\d.]/g, '');
+  const firstDot = s.indexOf('.');
+  if (firstDot >= 0) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+  }
+  return s;
+};
+
+// ---- Валидация одной строки ----
+type RowErrors = { qty?: string; shelf?: string };
+
+function validateRow(row: Row, unit: string): RowErrors {
+  const errors: RowErrors = {};
+  const qty = Number(row.qty);
+  const shelf = Number(row.shelf);
+
+  if (!row.productId) {
+    return { qty: 'Выберите продукт' };
+  }
+
+  if (row.qty === '' || !(qty > 0)) {
+    errors.qty = 'Укажите количество больше 0';
+  } else if (qty > maxQtyFor(unit)) {
+    errors.qty = `Максимум ${maxQtyFor(unit).toLocaleString('ru-RU')} ${unitLabel(unit)}`;
+  } else if (unit === 'pcs' && !Number.isInteger(qty)) {
+    errors.qty = 'Количество штук должно быть целым числом';
+  } else if ((unit === 'g' || unit === 'ml') && !hasAtMostThreeDecimals(row.qty)) {
+    errors.qty = 'Не больше трёх знаков после запятой';
+  }
+
+  if (row.shelf === '' || !(shelf > 0)) {
+    errors.shelf = 'Укажите срок хранения больше 0';
+  } else if (!Number.isInteger(shelf)) {
+    errors.shelf = 'Срок хранения должен быть целым числом';
+  } else {
+    const shelfMax = row.shelfUnit === 'd' ? MAX_SHELF_DAYS : MAX_SHELF_HOURS;
+    if (shelf > shelfMax) {
+      errors.shelf = `Максимум ${shelfMax} ${row.shelfUnit === 'd' ? 'суток' : 'часов'}`;
+    }
+  }
+
+  return errors;
+}
+
 let nextRowKey = 1;
 const newRow = (): Row => ({ key: nextRowKey++, productId: '', qty: '', shelf: '', shelfUnit: 'd' });
 
@@ -36,6 +103,8 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DeliveryResult | null>(null);
+  /** Ошибки появляются только после первой попытки submit — как в GOV.UK / Oxide. */
+  const [submitted, setSubmitted] = useState(false);
 
   const formRef = useRef<HTMLElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -52,6 +121,15 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
   const removeRow = (key: number) =>
     setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.key !== key) : prev));
 
+  const rowErrors = useMemo(
+    () => rows.map((r) => validateRow(r, unitOf(r.productId))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, products],
+  );
+
+  const visibleErrors = submitted ? rowErrors : rows.map(() => ({} as RowErrors));
+  const hasErrors = submitted && rowErrors.some((e) => e.qty || e.shelf);
+
   /** Кладёт рекомендацию в форму: в пустую строку или в новую. Дубликаты не создаём. */
   const withSuggestion = (list: Row[], item: RestockItem): Row[] => {
     if (list.some((r) => r.productId === item.product_id)) return list;
@@ -67,7 +145,6 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
   const addSuggestion = (item: RestockItem) => setRows((prev) => withSuggestion(prev, item));
   const addAllSuggestions = () => {
     setRows((prev) => restock.reduce(withSuggestion, prev));
-    // На узком экране форма ниже рекомендаций — прокручиваем к ней.
     if (window.innerWidth < 1280) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -75,21 +152,27 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
 
   const submit = async () => {
     if (submitting) return;
-    const items: { product_id: string; quantity: number; shelf_life_hours: number }[] = [];
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      const qty = Number(r.qty);
-      const shelf = Number(r.shelf);
-      const n = i + 1;
-      if (!r.productId) return setError(`Позиция ${n}: выберите продукт`);
-      if (!(qty > 0)) return setError(`Позиция ${n}: укажите количество больше 0`);
-      if (!(shelf > 0)) return setError(`Позиция ${n}: укажите срок хранения больше 0`);
-      items.push({
-        product_id: r.productId,
-        quantity: qty,
-        shelf_life_hours: r.shelfUnit === 'd' ? shelf * 24 : shelf,
-      });
+    setSubmitted(true);
+
+    const errors = rows.map((r) => validateRow(r, unitOf(r.productId)));
+    const firstBad = errors.findIndex((e) => e.qty || e.shelf);
+    if (firstBad >= 0) {
+      const id = errors[firstBad].qty ? `qty-${rows[firstBad].key}` : `shelf-${rows[firstBad].key}`;
+      document.getElementById(id)?.focus();
+      return;
     }
+
+    const items: { product_id: string; quantity: number; shelf_life_hours: number }[] = rows.map(
+      (r) => {
+        const qty = Number(r.qty);
+        const shelf = Number(r.shelf);
+        return {
+          product_id: r.productId,
+          quantity: qty,
+          shelf_life_hours: r.shelfUnit === 'd' ? shelf * 24 : shelf,
+        };
+      },
+    );
 
     setSubmitting(true);
     setError(null);
@@ -101,6 +184,7 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
       setResult(data);
       setNumber('');
       setRows([newRow()]);
+      setSubmitted(false);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -111,6 +195,20 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
 
   const out = restock.filter((r) => r.status === 'out');
   const low = restock.filter((r) => r.status === 'low');
+
+
+  const isDirty =
+    number.trim() !== '' ||
+    rows.length > 1 ||
+    rows.some((r) => r.productId || r.qty || r.shelf);
+
+  const clearForm = () => {
+    if (!window.confirm('Очистить форму? Введённые данные будут потеряны.')) return;
+    setNumber('');
+    setRows([newRow()]);
+    setSubmitted(false);
+    setError(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -171,92 +269,129 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
           </div>
 
           <div className="space-y-3">
-            {rows.map((r, idx) => (
-              <div
-                key={r.key}
-                className="grid grid-cols-1 gap-3 rounded-lg border border-gray-800 bg-inset p-3 sm:grid-cols-2"
-              >
-                <div className="sm:col-span-2">
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <label className={LABEL_TEXT} htmlFor={`product-${r.key}`}>
-                      Продукт{rows.length > 1 && <span className="text-gray-600"> · позиция {idx + 1}</span>}
-                    </label>
-                    {rows.length > 1 && (
-                      <button
-                        onClick={() => removeRow(r.key)}
-                        className="text-xs text-gray-500 hover:text-red-300"
-                        aria-label={`Удалить позицию ${idx + 1}`}
-                      >
-                        Удалить
-                      </button>
-                    )}
-                  </div>
-                  <select
-                    id={`product-${r.key}`}
-                    value={r.productId}
-                    onChange={(e) => patchRow(r.key, { productId: e.target.value })}
-                    className={INPUT}
-                  >
-                    <option value="">Выберите продукт…</option>
-                    {sortedProducts.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({unitLabel(p.unit)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className={LABEL} htmlFor={`qty-${r.key}`}>
-                    Количество
-                  </label>
-                  <div className="relative">
-                    <input
-                      id={`qty-${r.key}`}
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="any"
-                      value={r.qty}
-                      onChange={(e) => patchRow(r.key, { qty: e.target.value })}
-                      placeholder="0"
-                      className={INPUT + ' pr-10'}
-                    />
-                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-500">
-                      {unitLabel(unitOf(r.productId))}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className={LABEL} htmlFor={`shelf-${r.key}`}>
-                    Срок хранения
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id={`shelf-${r.key}`}
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="any"
-                      value={r.shelf}
-                      onChange={(e) => patchRow(r.key, { shelf: e.target.value })}
-                      placeholder="0"
-                      className={INPUT + ' min-w-0'}
-                    />
+            {rows.map((r, idx) => {
+              const unit = unitOf(r.productId);
+              const errs = visibleErrors[idx];
+              const isPcs = unit === 'pcs';
+              return (
+                <div
+                  key={r.key}
+                  className="grid grid-cols-1 gap-3 rounded-lg border border-gray-800 bg-inset p-3 sm:grid-cols-2"
+                >
+                  <div className="sm:col-span-2">
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <label className={LABEL_TEXT} htmlFor={`product-${r.key}`}>
+                        Продукт
+                        {rows.length > 1 && <span className="text-gray-600"> · позиция {idx + 1}</span>}
+                      </label>
+                      {rows.length > 1 && (
+                        <button
+                          onClick={() => removeRow(r.key)}
+                          className="text-xs text-gray-500 hover:text-red-300"
+                          aria-label={`Удалить позицию ${idx + 1}`}
+                        >
+                          Удалить
+                        </button>
+                      )}
+                    </div>
                     <select
-                      value={r.shelfUnit}
-                      onChange={(e) => patchRow(r.key, { shelfUnit: e.target.value as 'h' | 'd' })}
-                      className={FIELD + ' w-20 shrink-0'}
-                      aria-label="Единица срока хранения"
+                      id={`product-${r.key}`}
+                      value={r.productId}
+                      onChange={(e) => patchRow(r.key, { productId: e.target.value })}
+                      className={INPUT}
                     >
-                      <option value="d">сут</option>
-                      <option value="h">ч</option>
+                      <option value="">Выберите продукт…</option>
+                      {sortedProducts.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({unitLabel(p.unit)})
+                        </option>
+                      ))}
                     </select>
                   </div>
+
+                  <div>
+                    <label className={LABEL} htmlFor={`qty-${r.key}`}>
+                      Количество
+                    </label>
+                    <div className="relative">
+                      <input
+                        id={`qty-${r.key}`}
+                        type="text"
+                        inputMode={isPcs ? 'numeric' : 'decimal'}
+                        value={r.qty}
+                        onChange={(e) => {
+                          let next = sanitizeNumeric(e.target.value);
+                          if (isPcs) {
+                            next = next.split('.')[0];
+                          } else {
+                            const dot = next.indexOf('.');
+                            if (dot >= 0) {
+                              next = next.slice(0, dot + 1) + next.slice(dot + 1, dot + 4);
+                            }
+                          }
+                          patchRow(r.key, { qty: next });
+                        }}
+                        placeholder="0"
+                        className={
+                          INPUT +
+                          ' pr-10' +
+                          (errs.qty ? ' border-red-500 focus:border-red-500' : '')
+                        }
+                        aria-invalid={!!errs.qty}
+                        aria-describedby={errs.qty ? `qty-${r.key}-error` : undefined}
+                      />
+                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-500">
+                        {unitLabel(unit)}
+                      </span>
+                    </div>
+                    {errs.qty && (
+                      <p id={`qty-${r.key}-error`} className="mt-1 text-xs text-red-400">
+                        {errs.qty}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={LABEL} htmlFor={`shelf-${r.key}`}>
+                      Срок хранения
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        id={`shelf-${r.key}`}
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        step="1"
+                        value={r.shelf}
+                        onChange={(e) => patchRow(r.key, { shelf: e.target.value })}
+                        placeholder="0"
+                        className={
+                          INPUT +
+                          ' min-w-0' +
+                          (errs.shelf ? ' border-red-500 focus:border-red-500' : '')
+                        }
+                        aria-invalid={!!errs.shelf}
+                        aria-describedby={errs.shelf ? `shelf-${r.key}-error` : undefined}
+                      />
+                      <select
+                        value={r.shelfUnit}
+                        onChange={(e) => patchRow(r.key, { shelfUnit: e.target.value as 'h' | 'd' })}
+                        className={FIELD + ' w-20 shrink-0'}
+                        aria-label="Единица срока хранения"
+                      >
+                        <option value="d">сут</option>
+                        <option value="h">ч</option>
+                      </select>
+                    </div>
+                    {errs.shelf && (
+                      <p id={`shelf-${r.key}-error`} className="mt-1 text-xs text-red-400">
+                        {errs.shelf}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <button
@@ -277,13 +412,30 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
             </div>
           )}
 
-          <button
-            onClick={submit}
-            disabled={submitting}
-            className="mt-4 w-full rounded-lg bg-accent py-2.5 font-medium text-white shadow-md shadow-indigo-500/25 transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:px-8"
-          >
-            {submitting ? 'Принимаем…' : 'Принять поставку'}
-          </button>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              onClick={submit}
+              disabled={submitting}
+              className="w-full rounded-lg bg-accent py-2.5 font-medium text-white shadow-md shadow-indigo-500/25 transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:px-8"
+            >
+              {submitting ? 'Принимаем…' : 'Принять поставку'}
+            </button>
+
+            <button
+              type="button"
+              onClick={clearForm}
+              disabled={submitting || !isDirty}
+              className="w-full rounded-lg border border-gray-700 py-2.5 text-sm text-gray-400 transition-colors hover:border-gray-500 hover:text-gray-200 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:px-6"
+            >
+              Очистить
+            </button>
+          </div>
+
+          {hasErrors && (
+            <p className="mt-2 text-xs text-red-400">
+              Исправьте ошибки в форме — отправка заблокирована.
+            </p>
+          )}
         </section>
 
         {/* Что нужно заказать */}
@@ -362,7 +514,11 @@ function RestockGroup({
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-gray-100">{it.name}</div>
                   <div className="mt-0.5 text-xs text-gray-500">
-                    {it.status === 'out' ? 'нет в наличии' : `осталось ${formatQty(it.quantity, it.unit)}`}
+                    {it.quantity <= 0
+                      ? 'нет в наличии'
+                      : it.status === 'out'
+                        ? `осталось ${formatQty(it.quantity, it.unit)}`
+                        : `осталось ${formatQty(it.quantity, it.unit)}`}
                     {' · '}минимум {formatQty(it.min_stock, it.unit)}
                   </div>
                   {it.blocked_dishes > 0 && (
