@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import Sidebar from './components/Sidebar';
+import Sidebar, { tabFromHash } from './components/Sidebar';
 import Header from './components/Header';
 import StatCard from './components/StatCard';
 import StockTable from './components/StockTable';
@@ -14,6 +14,7 @@ import DonutChart from './components/DonutChart';
 import Background from './components/Background';
 import ErrorBanner from './components/ErrorBanner';
 import SectionTitle from './components/SectionTitle';
+
 
 import { api, errorMessage } from './api';
 import type {
@@ -33,7 +34,8 @@ import { hoursUntil, plural } from './utils';
 const POLL_MS = 10_000;
 
 export default function App() {
-  const [tab, setTab] = useState('dashboard');
+    // Начальное значение — сразу из URL, чтобы F5 на #/orders открывал «Заказы».
+  const [tab, setTab] = useState(() => tabFromHash(window.location.hash));
   const [products, setProducts] = useState<Product[]>([]);
   const [stoplist, setStoplist] = useState<StopDish[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -74,6 +76,13 @@ export default function App() {
     }
   }, []);
 
+    // «Назад»/«Вперёд» браузера и прямые ссылки — всё идёт через hashchange.
+  useEffect(() => {
+    const onHash = () => setTab(tabFromHash(window.location.hash));
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
   useEffect(() => {
     // Первичная загрузка с сервера: setState вызывается после await, а не синхронно.
     // oxlint-disable-next-line react/set-state-in-effect
@@ -112,17 +121,13 @@ export default function App() {
     writeoffs: { title: 'Списание', subtitle: 'Просроченные партии и аналитика потерь' },
   };
 
-  const selectTab = (id: string) => {
-    setTab(id);
-    setMenuOpen(false);
-  };
 
   return (
     <div className="flex h-dvh overflow-hidden">
       <Background />
       <Sidebar
         active={tab}
-        onChange={selectTab}
+        onNavigate={() => setMenuOpen(false)}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         badges={{ delivery: restock.length, writeoffs: expired }}

@@ -99,7 +99,7 @@ export default function WriteoffsPage({ batches, report, onChanged }: Props) {
 
         {pending.length === 0 ? (
           <div className="rounded-2xl border border-emerald-800/40 bg-emerald-950/20 p-5 text-emerald-300">
-            Просроченных партий нет 🎉
+            Просроченных партий сейчас нет
           </div>
         ) : (
           <ul className="divide-y divide-gray-900 rounded-2xl border border-red-900/40 bg-red-950/10">

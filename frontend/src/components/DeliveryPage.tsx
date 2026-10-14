@@ -367,7 +367,7 @@ function RestockGroup({
                   </div>
                   {it.blocked_dishes > 0 && (
                     <div className="mt-1 text-xs text-red-400">
-                      🚫 из-за него не готовятся {it.blocked_dishes}{' '}
+                      Из-за продукта не готовятся {it.blocked_dishes}{' '}
                       {plural(it.blocked_dishes, ['блюдо', 'блюда', 'блюд'])}
                     </div>
                   )}

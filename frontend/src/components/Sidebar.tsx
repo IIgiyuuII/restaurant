@@ -3,7 +3,8 @@ import type { IconName } from './Icons';
 
 type Props = {
   active: string;
-  onChange: (tab: string) => void;
+  /** Вызывается после клика — чтобы закрыть мобильное меню. */
+  onNavigate: () => void;
   /** На узких экранах сайдбар — выезжающее меню. */
   open: boolean;
   onClose: () => void;
@@ -21,11 +22,23 @@ const items: { id: string; label: string; icon: IconName }[] = [
   { id: 'writeoffs', label: 'Списание', icon: 'trash' },
 ];
 
-export default function Sidebar({ active, onChange, open, onClose, badges = {} }: Props) {
+/** '#/orders' → 'orders'; '#/' или '' → 'dashboard'. */
+export function tabFromHash(hash: string, fallback = 'dashboard'): string {
+  const id = hash.replace(/^#\/?/, '').trim();
+  return items.some((i) => i.id === id) ? id : fallback;
+}
+
+export default function Sidebar({ active, onNavigate, open, onClose, badges = {} }: Props) {
   return (
     <>
       {/* Затемнение под меню на мобильных */}
-      {open && <div className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden" onClick={onClose} aria-hidden="true" />}
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
       <aside
         className={
@@ -48,9 +61,12 @@ export default function Sidebar({ active, onChange, open, onClose, badges = {} }
             const isActive = active === it.id;
             const badge = badges[it.id] ?? 0;
             return (
-              <button
+              // <a href="#/id"> вместо <button onClick>:
+              // браузер сам пишет запись в history, «Назад» работает без JS.
+              <a
                 key={it.id}
-                onClick={() => onChange(it.id)}
+                href={`#/${it.id}`}
+                onClick={onNavigate}
                 aria-current={isActive ? 'page' : undefined}
                 className={
                   'flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ' +
@@ -66,7 +82,7 @@ export default function Sidebar({ active, onChange, open, onClose, badges = {} }
                     {badge}
                   </span>
                 )}
-              </button>
+              </a>
             );
           })}
         </nav>

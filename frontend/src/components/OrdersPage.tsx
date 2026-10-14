@@ -90,7 +90,7 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
 
                   <div className="mt-1 text-xs">
                     {stopped ? (
-                      <span className="text-red-400">🚫 стоп-лист</span>
+                      <span className="text-red-400"> Блюдо в стоп-листе</span>
                     ) : (
                       <span className={d.portions <= 3 ? 'text-yellow-400' : 'text-gray-500'}>
                         доступно {d.portions} {plural(d.portions, ['порция', 'порции', 'порций'])}
