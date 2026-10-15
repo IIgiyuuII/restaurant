@@ -43,7 +43,7 @@ export default function HotOfferCard({ offer, rank, topScore, inCart, onAdd, com
   const showImage = Boolean(offer.image_url) && !imgFailed;
 
   return (
-    <div className="bg-surface flex flex-col rounded-2xl border border-gray-800 p-4 sm:p-5">
+    <div className="bg-surface flex h-full flex-col rounded-2xl border border-gray-800 p-4 transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-xl hover:shadow-indigo-500/10 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft font-mono text-xs font-medium text-accent-text">
@@ -88,7 +88,7 @@ export default function HotOfferCard({ offer, rank, topScore, inCart, onAdd, com
       </div>
 
       <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-gray-800">
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: lvl.bar }} />
+        <div className="animate-grow-x h-full origin-left rounded-full" style={{ width: `${pct}%`, background: lvl.bar }} />
       </div>
 
       <div className="mt-5 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500">

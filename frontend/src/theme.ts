@@ -17,9 +17,19 @@ function readStored(): ThemeMode {
 const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 /** Ставит data-theme на <html>. Вызывается до первого рендера, чтобы не было вспышки. */
-export function applyTheme(mode: ThemeMode) {
+export function applyTheme(mode: ThemeMode, animate = false) {
   const resolved = mode === 'system' ? (systemDark() ? 'dark' : 'light') : mode;
-  document.documentElement.dataset.theme = resolved;
+  const apply = () => {
+    document.documentElement.dataset.theme = resolved;
+  };
+  if (document.documentElement.dataset.theme === resolved) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Кросс-фейд всей страницы, если браузер умеет; иначе — мгновенная смена.
+  if (animate && !reduce && 'startViewTransition' in document) {
+    (document as Document & { startViewTransition: (cb: () => void) => unknown }).startViewTransition(apply);
+  } else {
+    apply();
+  }
 }
 
 export function initTheme() {
@@ -36,14 +46,14 @@ export function useTheme() {
     } catch {
       /* ignore */
     }
-    applyTheme(next);
+    applyTheme(next, true);
   }, []);
 
   // В режиме «как в системе» следим за сменой системной темы.
   useEffect(() => {
     if (mode !== 'system') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => applyTheme('system');
+    const onChange = () => applyTheme('system', true);
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, [mode]);

@@ -3,8 +3,7 @@ import type { IconName } from './Icons';
 
 type Props = {
   active: string;
-  /** Вызывается после клика — чтобы закрыть мобильное меню. */
-  onNavigate: () => void;
+  onChange: (tab: string) => void;
   /** На узких экранах сайдбар — выезжающее меню. */
   open: boolean;
   onClose: () => void;
@@ -22,23 +21,21 @@ const items: { id: string; label: string; icon: IconName }[] = [
   { id: 'writeoffs', label: 'Списание', icon: 'trash' },
 ];
 
-/** '#/orders' → 'orders'; '#/' или '' → 'dashboard'. */
-export function tabFromHash(hash: string, fallback = 'dashboard'): string {
-  const id = hash.replace(/^#\/?/, '').trim();
-  return items.some((i) => i.id === id) ? id : fallback;
+/**
+ * Вкладка из адреса: '#stock' или '#/stock' → 'stock'.
+ * Неизвестное значение или пустой хэш → 'dashboard'.
+ */
+export function tabFromHash(hash: string): string {
+  const id = hash.replace(/^#\/?/, '');
+  return items.some((it) => it.id === id) ? id : 'dashboard';
 }
 
-export default function Sidebar({ active, onNavigate, open, onClose, badges = {} }: Props) {
+export default function Sidebar({ active, onChange, open, onClose, badges = {} }: Props) {
+  const activeIndex = items.findIndex((it) => it.id === active);
   return (
     <>
       {/* Затемнение под меню на мобильных */}
-      {open && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      )}
+      {open && <div className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden" onClick={onClose} aria-hidden="true" />}
 
       <aside
         className={
@@ -56,23 +53,26 @@ export default function Sidebar({ active, onNavigate, open, onClose, badges = {}
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-2">
+        <nav className="stagger relative flex-1 space-y-1.5 overflow-y-auto px-3 py-2">
+          {/* Скользящая плашка активного пункта: высота пункта 2.5rem + зазор 0.375rem */}
+          {activeIndex >= 0 && (
+            <span
+              aria-hidden="true"
+              className="no-stagger pointer-events-none absolute inset-x-3 top-2 h-10 rounded-xl bg-accent-soft transition-transform duration-300 ease-[cubic-bezier(0.34,1.3,0.64,1)]"
+              style={{ transform: `translateY(${activeIndex * 2.875}rem)` }}
+            />
+          )}
           {items.map((it) => {
             const isActive = active === it.id;
             const badge = badges[it.id] ?? 0;
             return (
-              // <a href="#/id"> вместо <button onClick>:
-              // браузер сам пишет запись в history, «Назад» работает без JS.
-              <a
+              <button
                 key={it.id}
-                href={`#/${it.id}`}
-                onClick={onNavigate}
+                onClick={() => onChange(it.id)}
                 aria-current={isActive ? 'page' : undefined}
                 className={
-                  'flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ' +
-                  (isActive
-                    ? 'bg-accent-soft text-accent-text'
-                    : 'text-gray-400 hover:bg-hover hover:text-gray-100')
+                  'relative flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors ' +
+                  (isActive ? 'text-accent-text' : 'text-gray-400 hover:bg-hover hover:text-gray-100')
                 }
               >
                 <Icon name={it.icon} size={20} />
@@ -82,7 +82,7 @@ export default function Sidebar({ active, onNavigate, open, onClose, badges = {}
                     {badge}
                   </span>
                 )}
-              </a>
+              </button>
             );
           })}
         </nav>

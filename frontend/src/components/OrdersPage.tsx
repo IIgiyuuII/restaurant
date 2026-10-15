@@ -6,6 +6,7 @@ import { api, errorMessage } from '../api';
 import type { Cart, Dish, OrderHistoryEntry, OrderResult } from '../types';
 import { formatDate, formatMoney, plural } from '../utils';
 import OrderResultCard from './OrderResultCard';
+import Icon from './Icons';
 
 type Props = {
   dishes: Dish[];
@@ -90,7 +91,7 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
 
                   <div className="mt-1 text-xs">
                     {stopped ? (
-                      <span className="text-red-400"> Блюдо в стоп-листе</span>
+                      <span className="inline-flex items-center gap-1 text-red-400"><Icon name="ban" size={13} />стоп-лист</span>
                     ) : (
                       <span className={d.portions <= 3 ? 'text-yellow-400' : 'text-gray-500'}>
                         доступно {d.portions} {plural(d.portions, ['порция', 'порции', 'порций'])}
@@ -102,19 +103,19 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
                     <button
                       onClick={() => change(d, -1)}
                       disabled={stopped || qty === 0}
-                      className="w-8 h-8 rounded-lg border border-gray-700 text-gray-300 hover:bg-hover disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 text-gray-300 hover:border-accent hover:bg-hover hover:text-accent-text disabled:opacity-30 disabled:cursor-not-allowed"
                       aria-label={`Убрать ${d.name}`}
                     >
-                      −
+                      <Icon name="minus" size={16} />
                     </button>
                     <span className="w-8 text-center font-mono text-gray-100">{qty}</span>
                     <button
                       onClick={() => change(d, 1)}
                       disabled={stopped || qty >= d.portions}
-                      className="w-8 h-8 rounded-lg border border-gray-700 text-gray-300 hover:bg-hover disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 text-gray-300 hover:border-accent hover:bg-hover hover:text-accent-text disabled:opacity-30 disabled:cursor-not-allowed"
                       aria-label={`Добавить ${d.name}`}
                     >
-                      +
+                      <Icon name="plus" size={16} />
                     </button>
                   </div>
                 </div>
@@ -134,7 +135,7 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
           ) : (
             <ul className="space-y-2 mb-4">
               {lines.map((d) => (
-                <li key={d.id} className="flex items-center justify-between text-sm">
+                <li key={d.id} className="animate-fade-up flex items-center justify-between text-sm">
                   <span className="text-gray-200">
                     {d.name} <span className="text-gray-500">× {qtyOf(d)}</span>
                   </span>

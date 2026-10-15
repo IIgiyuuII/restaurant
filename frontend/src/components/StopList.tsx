@@ -14,8 +14,9 @@ const COMPACT_LIMIT = 5;
 export default function StopList({ dishes, compact, onAll }: Props) {
   if (dishes.length === 0) {
     return (
-      <div className="bg-surface rounded-2xl border border-emerald-800/40 p-6 text-emerald-300">
-        Стоп-лист пуст — все блюда доступны 🎉
+      <div className="bg-surface flex items-center gap-2.5 rounded-2xl border border-emerald-800/40 p-6 text-emerald-300">
+        <Icon name="checkCircle" size={20} />
+        Стоп-лист пуст — все блюда доступны
       </div>
     );
   }

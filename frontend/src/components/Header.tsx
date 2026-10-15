@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from './Icons';
 import type { IconName } from './Icons';
+import { usePresence } from '../usePresence';
 import { useTheme } from '../theme';
 import type { ThemeMode } from '../theme';
 
 type Props = { title: string; subtitle?: string; onMenu: () => void };
-
-/** Инициалы в аватарке — пока нет авторизации, фиксированные. */
-const USER_INITIALS = 'АА';
 
 const THEMES: { id: ThemeMode; label: string; icon: IconName }[] = [
   { id: 'light', label: 'Светлая', icon: 'sun' },
@@ -65,6 +63,7 @@ export default function Header({ title, subtitle, onMenu }: Props) {
 function UserMenu() {
   const { mode, setMode } = useTheme();
   const [open, setOpen] = useState(false);
+  const mounted = usePresence(open);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,25 +81,34 @@ function UserMenu() {
   }, [open]);
 
   return (
-    <div ref={ref} className="relative flex items-center gap-1.5">
-      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-indigo-400 to-indigo-600 text-sm font-semibold text-white shadow-md shadow-indigo-500/30">
-        {USER_INITIALS}
-      </span>
+    <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="bg-surface flex h-9 w-9 items-center justify-center rounded-xl border border-gray-800 text-gray-400 hover:text-gray-100"
-        aria-label="Настройки темы"
+        className="group flex items-center gap-1.5"
+        aria-label="Меню и тема"
+        aria-haspopup="menu"
         aria-expanded={open}
       >
-        <Icon name="chevronDown" size={16} className={'transition-transform ' + (open ? 'rotate-180' : '')} />
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-indigo-400 to-indigo-600 text-white shadow-md shadow-indigo-500/30 transition-transform duration-200 group-hover:scale-105">
+          <Icon name="user" size={19} />
+        </span>
+        <span className="bg-surface flex h-9 w-9 items-center justify-center rounded-xl border border-gray-800 text-gray-400 transition-colors group-hover:text-gray-100">
+          <Icon name="chevronDown" size={16} className={'transition-transform duration-200 ' + (open ? 'rotate-180' : '')} />
+        </span>
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-12 z-50 w-52 overflow-hidden rounded-2xl border border-gray-700 bg-field p-1.5 shadow-xl backdrop-blur-xl">
+      {mounted && (
+        <div
+          role="menu"
+          data-state={open ? 'open' : 'closed'}
+          className="absolute right-0 top-12 z-50 w-52 origin-top-right overflow-hidden rounded-2xl border border-gray-700 bg-popover p-1.5 shadow-xl shadow-black/20 backdrop-blur-xl data-[state=closed]:pointer-events-none data-[state=closed]:animate-menu-out data-[state=open]:animate-menu-in"
+        >
           <div className="px-3 pt-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-500">Тема</div>
           {THEMES.map((t) => (
             <button
               key={t.id}
+              role="menuitemradio"
+              aria-checked={mode === t.id}
               onClick={() => {
                 setMode(t.id);
                 setOpen(false);

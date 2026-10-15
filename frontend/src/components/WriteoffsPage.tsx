@@ -5,6 +5,7 @@ import type { Batch, ExpiryReport, ExpiryWriteOffResult } from '../types';
 import { formatDate, formatQty, hoursUntil, plural } from '../utils';
 import DonutChart from './DonutChart';
 import StatCard from './StatCard';
+import Icon from './Icons';
 
 type Props = {
   batches: Batch[];
@@ -58,16 +59,19 @@ export default function WriteoffsPage({ batches, report, onChanged }: Props) {
   return (
     <div className="space-y-8">
       {report && (
-        <div className="rounded-2xl border border-gray-800 bg-surface px-4 py-3 text-sm text-gray-400">
+        <div className="flex items-start gap-2.5 rounded-2xl border border-gray-800 bg-surface px-4 py-3 text-sm text-gray-400">
+          <Icon name="clock" size={18} className="mt-0.5 text-accent-text" />
+          <div>
           {report.auto_check_minutes > 0 ? (
             <>
-              ⏱ Сервер сам списывает просрочку раз в{' '}
+              Сервер сам списывает просрочку раз в{' '}
               <span className="text-gray-200">{intervalLabel(report.auto_check_minutes)}</span>. Здесь это можно
               сделать сразу.
             </>
           ) : (
-            <>⏱ Автосписание выключено — просроченные партии списываются только вручную.</>
+            <>Автосписание выключено — просроченные партии списываются только вручную.</>
           )}
+          </div>
         </div>
       )}
 
@@ -87,19 +91,21 @@ export default function WriteoffsPage({ batches, report, onChanged }: Props) {
         </div>
 
         {flash && (
-          <div className="mb-3 rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-300">
-            ✅ {flash}
+          <div className="animate-pop-in mb-3 flex items-center gap-2 rounded-lg border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-300">
+            <Icon name="checkCircle" size={18} />
+            {flash}
           </div>
         )}
         {error && (
-          <div className="mb-3 rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
+          <div className="animate-fade-up mb-3 rounded-lg border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
             {error}
           </div>
         )}
 
         {pending.length === 0 ? (
-          <div className="rounded-2xl border border-emerald-800/40 bg-emerald-950/20 p-5 text-emerald-300">
-            Просроченных партий сейчас нет
+          <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-800/40 bg-emerald-950/20 p-5 text-emerald-300">
+            <Icon name="checkCircle" size={20} />
+            Просроченных партий нет
           </div>
         ) : (
           <ul className="divide-y divide-gray-900 rounded-2xl border border-red-900/40 bg-red-950/10">

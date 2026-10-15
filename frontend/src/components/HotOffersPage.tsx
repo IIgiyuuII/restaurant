@@ -1,5 +1,7 @@
 import type { Cart, HotOffer } from '../types';
 import HotOfferCard from './HotOfferCard';
+import Collapsible from './Collapsible';
+import Icon from './Icons';
 
 type Props = {
   offers: HotOffer[];
@@ -14,9 +16,8 @@ export default function HotOffersPage({ offers, cart, onAdd, onOpenOrders }: Pro
 
   return (
     <div className="w-full min-w-0 space-y-6">
-      <details className="rounded-2xl border border-gray-800 bg-surface px-5 py-3 text-sm text-gray-400">
-        <summary className="cursor-pointer text-gray-300">Как считается приоритет?</summary>
-        <div className="mt-3 space-y-2 leading-relaxed">
+      <Collapsible title="Как считается приоритет?">
+        <div className="space-y-2 leading-relaxed">
           <p>
             Для каждой «горящей» партии ингредиента (срок годности меньше 3 суток) блюдо получает
             баллы: <span className="text-gray-200">срочность × покрытие × доля</span>. Баллы по
@@ -39,27 +40,29 @@ export default function HotOffersPage({ offers, cart, onAdd, onOpenOrders }: Pro
           </ul>
           <p>Блюда из стоп-листа не рекомендуются. Список обновляется после каждого заказа и поставки.</p>
         </div>
-      </details>
+      </Collapsible>
 
       {cartCount > 0 && (
-       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-accent/30 bg-accent-soft px-4 sm:px-5 py-3">
+       <div className="animate-slide-down flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-accent/30 bg-accent-soft px-4 sm:px-5 py-3">
           <span className="text-sm font-medium text-accent-text">В заказе порций: {cartCount}</span>
           <button
             onClick={onOpenOrders}
-            className="text-sm text-accent-text hover:opacity-80 underline underline-offset-4"
+            className="inline-flex items-center gap-1 text-sm text-accent-text hover:opacity-80"
           >
-            Перейти к оформлению →
+            Перейти к оформлению
+            <Icon name="arrowRight" size={14} />
           </button>
         </div>
       )}
 
       {offers.length === 0 ? (
-        <div className="rounded-2xl border border-emerald-800/40 bg-emerald-950/20 p-6 text-emerald-300">
-          Горячих предложений нет — срок годности продуктов не поджимает 🎉
+        <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-800/40 bg-emerald-950/20 p-6 text-emerald-300">
+          <Icon name="checkCircle" size={20} />
+          Горячих предложений нет — срок годности продуктов не поджимает
         </div>
       ) : (
         
-      <div className="grid w-full min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+      <div className="stagger grid w-full min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
         {offers.map((o, i) => (
           <HotOfferCard
             key={o.dish_id}

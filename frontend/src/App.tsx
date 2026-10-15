@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 import Sidebar, { tabFromHash } from './components/Sidebar';
 import Header from './components/Header';
@@ -12,9 +13,9 @@ import DeliveryPage from './components/DeliveryPage';
 import WriteoffsPage from './components/WriteoffsPage';
 import DonutChart from './components/DonutChart';
 import Background from './components/Background';
+import Icon from './components/Icons';
 import ErrorBanner from './components/ErrorBanner';
 import SectionTitle from './components/SectionTitle';
-
 
 import { api, errorMessage } from './api';
 import type {
@@ -34,8 +35,17 @@ import { hoursUntil, plural } from './utils';
 const POLL_MS = 10_000;
 
 export default function App() {
-    // Начальное значение — сразу из URL, чтобы F5 на #/orders открывал «Заказы».
-  const [tab, setTab] = useState(() => tabFromHash(window.location.hash));
+  // Текущая вкладка хранится в адресной строке (#stock), поэтому работают «назад» и обновление страницы.
+  const [tab, setTabState] = useState(() => tabFromHash(window.location.hash));
+  const setTab = useCallback((id: string) => {
+    setTabState(id);
+    if (tabFromHash(window.location.hash) !== id) window.location.hash = id;
+  }, []);
+  useEffect(() => {
+    const onHash = () => setTabState(tabFromHash(window.location.hash));
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
   const [products, setProducts] = useState<Product[]>([]);
   const [stoplist, setStoplist] = useState<StopDish[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -76,13 +86,6 @@ export default function App() {
     }
   }, []);
 
-    // «Назад»/«Вперёд» браузера и прямые ссылки — всё идёт через hashchange.
-  useEffect(() => {
-    const onHash = () => setTab(tabFromHash(window.location.hash));
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
-
   useEffect(() => {
     // Первичная загрузка с сервера: setState вызывается после await, а не синхронно.
     // oxlint-disable-next-line react/set-state-in-effect
@@ -121,13 +124,17 @@ export default function App() {
     writeoffs: { title: 'Списание', subtitle: 'Просроченные партии и аналитика потерь' },
   };
 
+  const selectTab = (id: string) => {
+    setTab(id);
+    setMenuOpen(false);
+  };
 
   return (
     <div className="flex h-dvh overflow-hidden">
       <Background />
       <Sidebar
         active={tab}
-        onNavigate={() => setMenuOpen(false)}
+        onChange={selectTab}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         badges={{ delivery: restock.length, writeoffs: expired }}
@@ -148,8 +155,8 @@ export default function App() {
           )}
 
           {loaded && tab === 'dashboard' && (
-            <div className="space-y-8">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            <div className="stagger space-y-8">
+              <div className="stagger no-stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                 <StatCard
                   label="Продуктов"
                   value={products.length}
@@ -189,14 +196,17 @@ export default function App() {
               </div>
 
               {hotOffers.length > 0 && (
-                <section>
+                <section className="no-stagger">
                   <SectionTitle icon="flame" action={{ label: 'Все предложения', onClick: () => setTab('hot') }}>
                     Горячие предложения
                   </SectionTitle>
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+                  <div
+                    className="stagger grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3"
+                    style={{ '--stagger-base': '160ms' } as CSSProperties}
+                  >
                     {hotOffers.slice(0, 3).map((o, i) => (
                       // Третья карточка — только на очень широких экранах, чтобы сетка из 2 колонок не оставляла дыру.
-                      <div key={o.dish_id} className={i === 2 ? 'hidden 2xl:contents' : 'contents'}>
+                      <div key={o.dish_id} className={i === 2 ? 'max-2xl:hidden' : undefined}>
                         <HotOfferCard
                           offer={o}
                           rank={i + 1}
@@ -231,8 +241,9 @@ export default function App() {
                       formatValue={(v) => `${v} ${plural(v, ['партия', 'партии', 'партий'])}`}
                     />
                   ) : (
-                    <div className="py-8 text-center text-sm text-gray-500">
-                      Просрочку не списывали — потерь нет 🎉
+                    <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
+                      <Icon name="checkCircle" size={18} className="text-emerald-400" />
+                      Просрочку не списывали — потерь нет
                     </div>
                   )}
                 </div>
@@ -247,31 +258,36 @@ export default function App() {
             </div>
           )}
 
-          {loaded && tab === 'stock' && <StockTable products={products} batches={batches} />}
-          {loaded && tab === 'stoplist' && <StopList dishes={stoplist} />}
-          {loaded && tab === 'orders' && (
-            <OrdersPage
-              dishes={dishes}
-              history={history}
-              cart={cart}
-              setCart={setCart}
-              onChanged={refresh}
-            />
-          )}
-          {loaded && tab === 'delivery' && (
-            <DeliveryPage products={products} restock={restock} onChanged={refresh} />
-          )}
-          {loaded && tab === 'writeoffs' && (
-            <WriteoffsPage batches={batches} report={report} onChanged={refresh} />
-          )}
-          {loaded && tab === 'hot' && (
-            <HotOffersPage
-              offers={hotOffers}
-              cart={cart}
-              onAdd={addToCart}
-              onOpenOrders={() => setTab('orders')}
-            />
-          )}
+          <div
+            key={tab}
+            className={tab === 'dashboard' || tab === 'delivery' || tab === 'hot' ? undefined : 'animate-fade-up'}
+          >
+            {loaded && tab === 'stock' && <StockTable products={products} batches={batches} />}
+            {loaded && tab === 'stoplist' && <StopList dishes={stoplist} />}
+            {loaded && tab === 'orders' && (
+              <OrdersPage
+                dishes={dishes}
+                history={history}
+                cart={cart}
+                setCart={setCart}
+                onChanged={refresh}
+              />
+            )}
+            {loaded && tab === 'delivery' && (
+              <DeliveryPage products={products} restock={restock} onChanged={refresh} />
+            )}
+            {loaded && tab === 'writeoffs' && (
+              <WriteoffsPage batches={batches} report={report} onChanged={refresh} />
+            )}
+            {loaded && tab === 'hot' && (
+              <HotOffersPage
+                offers={hotOffers}
+                cart={cart}
+                onAdd={addToCart}
+                onOpenOrders={() => setTab('orders')}
+              />
+            )}
+          </div>
         </main>
       </div>
     </div>

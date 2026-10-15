@@ -1,6 +1,7 @@
 import type { OrderResult } from '../types';
 import { formatDate, formatQty } from '../utils';
 import ExpiryBadge from './ExpiryBadge';
+import Icon from './Icons';
 
 type Props = { result: OrderResult; onClose: () => void };
 
@@ -10,7 +11,7 @@ export default function OrderResultCard({ result, onClose }: Props) {
   return (
     <div
       className={
-        'rounded-2xl border p-5 ' +
+        'animate-pop-in rounded-2xl border p-5 ' +
         (ok
           ? 'border-emerald-800/50 bg-emerald-950/20'
           : 'border-red-900/60 bg-red-950/20')
@@ -18,8 +19,9 @@ export default function OrderResultCard({ result, onClose }: Props) {
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className={'font-semibold ' + (ok ? 'text-emerald-300' : 'text-red-300')}>
-            {ok ? `✅ Заказ №${result.number} оформлен` : `⛔ Заказ №${result.number} отклонён`}
+          <div className={'flex items-center gap-2 font-semibold ' + (ok ? 'text-emerald-300' : 'text-red-300')}>
+            <Icon name={ok ? 'checkCircle' : 'xCircle'} size={20} />
+            {ok ? `Заказ №${result.number} оформлен` : `Заказ №${result.number} отклонён`}
           </div>
           <div className="text-sm text-gray-400 mt-1">
             {result.items.map((i) => `${i.name} × ${i.quantity}`).join(', ')}
@@ -27,10 +29,10 @@ export default function OrderResultCard({ result, onClose }: Props) {
         </div>
         <button
           onClick={onClose}
-          className="text-gray-500 hover:text-gray-200 text-lg leading-none"
+          className="rounded-lg p-1 text-gray-500 hover:bg-hover hover:text-gray-200"
           aria-label="Закрыть"
         >
-          ×
+          <Icon name="x" size={18} />
         </button>
       </div>
 

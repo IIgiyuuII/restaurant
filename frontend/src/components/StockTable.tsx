@@ -2,6 +2,8 @@ import { Fragment, useMemo, useState } from 'react';
 import type { Batch, Product } from '../types';
 import { formatDate, formatQuantity, formatQty, unitLabel } from '../utils';
 import ExpiryBadge from './ExpiryBadge';
+import Icon from './Icons';
+import Select from './Select';
 
 type Props = { products: Product[]; batches: Batch[] };
 
@@ -76,27 +78,21 @@ export default function StockTable({ products, batches }: Props) {
         <label className="text-xs uppercase tracking-wide text-gray-500" htmlFor="delivery-filter">
           Поставка
         </label>
-        <select
+        <Select
           id="delivery-filter"
           value={deliveryFilter}
-          onChange={(e) => {
-            setDeliveryFilter(e.target.value);
+          onChange={(v) => {
+            setDeliveryFilter(v);
             setOpen(new Set()); // сброс раскрытых строк при смене фильтра
           }}
+          options={[{ value: '', label: 'Все поставки' }, ...deliveries.map((d) => ({ value: d, label: d }))]}
           className={FIELD + ' min-w-56'}
-        >
-          <option value="">Все поставки</option>
-          {deliveries.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
+        />
 
         {visibleProducts.length > 0 && (
           <button
             onClick={toggleAll}
-            className="text-xs text-gray-500 hover:text-gray-200"
+            className="text-xs text-gray-500 hover:text-accent-text"
             type="button"
           >
             {allExpanded ? 'Свернуть все' : 'Развернуть все'}
@@ -109,7 +105,7 @@ export default function StockTable({ products, batches }: Props) {
           {deliveryFilter ? 'В этой поставке нет живых партий' : 'Нет данных'}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-surface">
+        <div key={deliveryFilter} className="animate-fade-up overflow-x-auto rounded-2xl border border-gray-800 bg-surface">
           <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="bg-inset text-left text-xs text-gray-500">
@@ -132,17 +128,26 @@ export default function StockTable({ products, batches }: Props) {
                     <tr
                       onClick={() => list.length > 0 && toggle(p.id)}
                       className={
-                        'border-b border-gray-900 hover:bg-hover ' +
+                        'border-b border-gray-900 transition-colors hover:bg-hover ' +
                         (list.length > 0 ? 'cursor-pointer' : '')
                       }
                     >
                       <td className="px-4 py-3 text-gray-200">
-                        <span className="inline-block w-4 text-gray-500">
-                          {list.length > 0 ? (isOpen ? '▾' : '▸') : ''}
+                        <span className="mr-1 inline-flex w-5 align-middle text-gray-500">
+                          {list.length > 0 && (
+                            <Icon
+                              name="chevronRight"
+                              size={15}
+                              className={'transition-transform duration-200 ' + (isOpen ? 'rotate-90' : '')}
+                            />
+                          )}
                         </span>
                         {p.name}
                         {hasExpired && (
-                          <span className="ml-2 text-xs text-red-400">⚠ есть просроченные</span>
+                          <span className="ml-2 inline-flex items-center gap-1 text-xs text-red-400">
+                            <Icon name="alertTriangle" size={13} />
+                            есть просроченные
+                          </span>
                         )}
                       </td>
                       <td
@@ -174,7 +179,7 @@ export default function StockTable({ products, batches }: Props) {
                     {isOpen && (
                       <tr className="border-b border-gray-900 bg-inset">
                         <td colSpan={6} className="px-4 py-3">
-                          <div className="overflow-x-auto">
+                          <div className="animate-fade-up overflow-x-auto">
                             <BatchList
                               batches={list}
                               // Если выбран фильтр по поставке — колонка «Поставка»
@@ -233,7 +238,7 @@ function BatchList({
                 <div className="flex items-center gap-2">
                   <div className="h-1.5 w-24 overflow-hidden rounded-full bg-gray-800">
                     <div
-                      className={'h-full ' + (b.expired ? 'bg-red-500' : 'bg-accent')}
+                      className={'animate-grow-x h-full origin-left ' + (b.expired ? 'bg-red-500' : 'bg-accent')}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

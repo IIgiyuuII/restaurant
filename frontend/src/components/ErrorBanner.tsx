@@ -6,7 +6,7 @@ export default function ErrorBanner({ message, onRetry, onClose }: Props) {
   return (
     <div
       role="alert"
-      className="mb-6 flex backdrop-blur-md flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3 sm:flex-nowrap sm:px-5"
+      className="animate-slide-down mb-6 flex backdrop-blur-md flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent-soft px-4 py-3 sm:flex-nowrap sm:px-5"
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-white">
         <Icon name="info" size={18} />

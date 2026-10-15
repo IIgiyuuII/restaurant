@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import Icon from './Icons';
 import type { IconName } from './Icons';
 
@@ -24,8 +25,35 @@ const ACCENTS: Record<StatAccent, { card: string; chip: string }> = {
   yellow: { card: 'bg-yellow-400/10 border-yellow-500/25', chip: 'bg-yellow-400/20 text-yellow-400' },
 };
 
+
+/** Плавно «досчитывает» число до нового значения (при монтировании — от 0). */
+function useCountUp(target: number, ms = 700) {
+  const [shown, setShown] = useState(0);
+  const from = useRef(0);
+
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const start = performance.now();
+    const a = from.current;
+    let raf = 0;
+    const tick = (now: number) => {
+      const p = reduce ? 1 : Math.min(1, (now - start) / ms);
+      const v = Math.round(a + (target - a) * (1 - Math.pow(1 - p, 3)));
+      from.current = v;
+      setShown(v);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+
+  return shown;
+}
+
 export default function StatCard({ label, value, hint, accent = 'neutral', icon, onClick }: Props) {
   const a = ACCENTS[accent];
+  const counted = useCountUp(typeof value === 'number' ? value : 0);
+  const display = typeof value === 'number' ? counted : value;
   const cls =
     'relative flex h-full w-full flex-col rounded-2xl border p-4 text-left backdrop-blur-md sm:p-5 ' +
     a.card +
@@ -44,7 +72,7 @@ export default function StatCard({ label, value, hint, accent = 'neutral', icon,
         {onClick && <Icon name="arrowRight" size={16} className="text-gray-500" />}
       </div>
       <div className="mt-5 text-[11px] font-medium uppercase tracking-wider text-gray-400">{label}</div>
-      <div className="mt-1.5 text-3xl font-bold leading-tight break-words text-gray-100">{value}</div>
+      <div className="mt-1.5 text-3xl font-bold leading-tight break-words text-gray-100">{display}</div>
       {hint && <div className="mt-1 text-xs text-gray-500">{hint}</div>}
     </>
   );

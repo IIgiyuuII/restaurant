@@ -11,7 +11,7 @@ type Props = {
 
 export default function SectionTitle({ icon, children, action }: Props) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="animate-fade-up mb-4 flex items-center justify-between gap-3">
       <h2 className="flex min-w-0 items-center gap-2.5 text-base font-semibold text-gray-100 sm:text-lg">
         {icon && <Icon name={icon} size={20} className="text-accent-text" />}
         {children}
