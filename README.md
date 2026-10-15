@@ -1,6 +1,11 @@
 # Restaurant Inventory — учёт продуктов, партий и стоп-листа
 
-Хакатон-проект: система для ресторана, которая ведёт учёт продуктов по партиям (поставкам) со сроками годности, обрабатывает заказы со списанием ингредиентов по FEFO, автоматически формирует стоп-лист блюд, горячие предложения и рекомендации по пополнению.
+Хакатон-проект: система для ресторана, которая ведёт учёт продуктов по партиям (поставкам) со сроками годности, обрабатывает заказы со списанием ингредиентов по FEFO, автоматически формирует стоп-лист блюд, горячие предложения и рекомендации по пополнению запасов.
+
+> **Демо:**
+> - Web: https://magnificent-trust-production-062b.up.railway.app/
+> - API: https://restaurant-production-2e70.up.railway.app/health
+> - Репозиторий: https://github.com/IIgiyuuII/restaurant
 
 ## Стек
 
@@ -12,9 +17,9 @@
 | БД | PostgreSQL 17 (Supabase, Session Pooler) |
 | Тесты | Go `testing`, PostgreSQL в Docker, изолированные схемы |
 | CI | GitHub Actions (`.github/workflows/backend-tests.yml`) |
-| Деплой | Railway (в планах) + существующая Supabase как основная БД |
+| CD | Railway (backend + frontend), Supabase как основная БД |
 
-## Что уже реализовано
+## Что реализовано
 
 ### Backend
 
@@ -39,49 +44,62 @@
 - [x] Unit- и integration-тесты с изолированными схемами в тестовой БД
 - [x] CI на GitHub Actions: `go vet`, `go test -race`, покрытие
 
-### Frontend
+### Frontend (web)
 
-- [x] Дашборд: карточки статистики (продукты, нет в наличии, истекают <24ч, в стоп-листе)
+- [x] Дашборд с аналитикой: карточки, графики заказов, диаграммы сроков и запасов
 - [x] Таблица остатков с раскрывающимися партиями и цветовой индикацией сроков
 - [x] Стоп-лист
-- [x] Форма поставки
-- [x] Форма заказа с корзиной, страница заказов и результат с `write_offs` / `shortages`
+- [x] Форма поставки с рекомендациями из `/api/restock`
+- [x] Форма заказа с корзиной, страница заказов, результат с `write_offs` / `shortages`
 - [x] Горячие предложения с объяснением причин
-- [x] Раздел списаний
-- [x] Тёмная тема, сайдбар, адаптивная вёрстка
+- [x] Раздел списаний: ручное списание и аналитика
+- [x] Тёмная тема, сайдбар, hash-based навигация, адаптивная вёрстка
 
-### Mobile
+### Mobile (Expo / React Native)
 
-- [x] Expo / React Native: дашборд, остатки, стоп-лист, горячие предложения, заказы
-- [ ] Настроить адрес API под физическое устройство (`localhost` на телефоне — это сам телефон)
+- [x] Дашборд, остатки, стоп-лист, горячие предложения, заказы
+- [x] Axios-клиент к тому же API
 
 ## Структура проекта
 
 ```
 restaurant/
+├── .github/workflows/backend-tests.yml   # CI: go vet + go test -race + coverage
 ├── backend/
-│   ├── cmd/api/main.go                  # точка входа, роутер, CORS
+│   ├── cmd/api/main.go                   # точка входа, роутер, CORS, автосписание
 │   ├── internal/
-│   │   ├── db/                          # pgxpool + simple protocol для pooler
-│   │   ├── handlers/                    # HTTP-слой
-│   │   ├── services/                    # бизнес-логика
-│   │   │   ├── delivery.go
-│   │   │   ├── orders.go
-│   │   │   ├── hot_offers.go
-│   │   │   ├── restock.go
-│   │   │   ├── expiry.go
-│   │   │   └── errors.go
-│   │   ├── models/                      # DTO
-│   │   └── testutil/                    # изолированные схемы для тестов
+│   │   ├── db/                           # pgxpool + simple protocol для Supabase pooler
+│   │   ├── handlers/                     # HTTP-слой
+│   │   ├── services/                     # бизнес-логика
+│   │   │   ├── delivery.go               # приём поставок
+│   │   │   ├── orders.go                 # FEFO-заказы
+│   │   │   ├── hot_offers.go             # горячие предложения (скоринг)
+│   │   │   ├── restock.go                # рекомендации по пополнению
+│   │   │   ├── expiry.go                 # списание просрочки + аналитика
+│   │   │   └── errors.go                 # ValidationError, ConflictError
+│   │   ├── models/                       # DTO
+│   │   └── testutil/                     # изолированные схемы для интеграционных тестов
 │   ├── migrations/
 │   │   ├── 000001_init.{up,down}.sql
 │   │   ├── 000002_seed.{up,down}.sql
 │   │   └── 000003_seed_deliveries.{up,down}.sql
-│   ├── docker-compose.test.yml          # одноразовая БД для тестов
+│   ├── Dockerfile                        #
+│   ├── .dockerignore
+│   ├── docker-compose.test.yml           # одноразовая БД для тестов
 │   └── go.mod
-├── frontend/                            # React + Vite
-├── mobile/                              # Expo + React Native
-├── .github/workflows/backend-tests.yml  # CI
+├── frontend/
+│   ├── src/
+│   │   ├── components/                   # дашборд, таблицы, формы, графики
+│   │   ├── App.tsx
+│   │   ├── api.ts
+│   │   ├── types.ts
+│   │   └── utils.ts
+│   ├── Dockerfile                        # Vite build + Caddy
+│   ├── Caddyfile                         # раздача статики с gzip и SPA-fallback
+│   ├── .dockerignore
+│   └── package.json
+├── mobile/                               # Expo / React Native
+├── DEPLOY.md                             # инструкция деплоя на Railway
 ├── .env.example
 ├── .gitignore
 └── README.md
@@ -96,129 +114,77 @@ DATABASE_URL=postgresql://postgres.ggrgcdtxyjxlvehlrdvb:ТВОЙ_ПАРОЛЬ@aw
 PORT=8081
 AUTO_WRITEOFF_INTERVAL=15m
 ```
-
-
 > `AUTO_WRITEOFF_INTERVAL=0` или `off` выключает фоновое списание просрочки.
 
-## Запуск
+## Локальный запуск
 
-### 1. Клонировать и настроить
+### 1. Подготовить конфигурацию
 
-```bash
-git clone https://github.com/IIgiyuuII/restaurant.git
-cd restaurant
-cp .env.example .env
+```powershell
+Copy-Item .env.example .env
 # открой .env и вставь реальный пароль Supabase
 ```
 
-### 2. Бэкенд
+### 2. Backend
 
-```bash
+```powershell
 cd backend
 go mod download
 go run ./cmd/api
 ```
 
-Сервер на `http://localhost:8081`. Проверка:
+API слушает `http://localhost:8081`. Проверка:
 
 ```powershell
 Invoke-RestMethod http://localhost:8081/health
 ```
 
-### 3. Frontend
+### 3. Web frontend
 
-```bash
+```powershell
 cd frontend
 npm ci
 npm run dev
 ```
 
-Открой `http://localhost:5173`.
+Vite поднимет `http://localhost:5173`.
 
 ### 4. Mobile
 
-```bash
+```powershell
 cd mobile
 npm ci
 npm start
 ```
 
-Дальше — инструкции Expo в терминале. Для теста на телефоне укажи в `mobile/src/api.ts` IP компьютера в локальной сети, а не `localhost`.
-
-## Тесты backend
-
-- **Unit-тесты** — бизнес-логика без БД: `normalizeOrder`, `scoreHotOffers`, `suggestQuantity`, типы ошибок, парсинг env.
-- **Integration-тесты** — SQL, транзакции, FEFO, конкурентность, схема БД. Требуют отдельной тестовой БД.
-- **Тесты миграций** — `up`/`down`/`up`, seed-данные, ограничения схемы.
-
-**Тестовая БД — отдельная от production. Не используй `DATABASE_URL` от Supabase как `TEST_DATABASE_URL`.**
-
-### Запуск на Windows (PowerShell)
-
-```powershell
-cd backend
-
-# 1. Поднять временную PostgreSQL 16 в Docker
-docker compose -f docker-compose.test.yml up -d
-
-# 2. Указать адрес и обязательный режим интеграционных тестов
-$env:TEST_DATABASE_URL = "postgresql://test:test@127.0.0.1:5433/restaurant_test?sslmode=disable"
-$env:TEST_REQUIRE_DB = "1"
-
-# 3. Прогнать проверки
-go vet ./...
-go test ./... -count=1 -v
-
-# 4. Остановить контейнер
-docker compose -f docker-compose.test.yml down
-Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue
-Remove-Item Env:TEST_REQUIRE_DB -ErrorAction SilentlyContinue
-```
-
-Тестовая БД использует `tmpfs` — данные не сохраняются между запусками. Если порт `5433` занят — поменяй проброс порта в `docker-compose.test.yml` и `TEST_DATABASE_URL` на одно значение.
-
-**С детектором гонок, как в CI:**
-
-```powershell
-go test ./... -race -count=1 -coverprofile=coverage.out
-go tool cover -func=coverage.out | Select-Object -Last 1
-```
-
-**Без Docker** — unit-тесты пройдут, интеграционные будут пропущены. Чтобы случайно не принять пропуск за полный прогон, локально используй `TEST_REQUIRE_DB=1` с Docker.
-
-## CI в GitHub Actions
-
-Workflow: `.github/workflows/backend-tests.yml`. На `push` и `pull_request` (при изменениях в `backend/**` или в самом workflow):
-
+Дальше — инструкции Expo. Для запуска на телефоне укажи в `mobile/src/api.ts` **IP компьютера** в локальной сети, а не `localhost`.
 
 ## API
 
 | Метод | Путь | Назначение |
 |-------|------|------------|
 | GET | `/health` | Проверка соединения с БД |
-| GET | `/api/products` | Остатки по продуктам (view `product_stock`) |
-| GET | `/api/dishes` | Меню с доступными порциями и ценой |
-| GET | `/api/stoplist` | Блюда с `portions = 0` |
-| GET | `/api/batches` | Живые партии со сроками, истекающие и просроченные |
+| GET | `/api/products` | Остатки продуктов |
+| GET | `/api/dishes` | Меню и доступное число порций |
+| GET | `/api/stoplist` | Блюда, недоступные к заказу |
+| GET | `/api/batches` | Партии и сроки годности |
 | GET | `/api/orders` | История заказов |
-| POST | `/api/orders` | Заказ с FEFO-списанием |
-| POST | `/api/deliveries` | Приём поставки |
-| GET | `/api/hot-offers` | Горячие предложения с объяснением |
-| GET | `/api/restock` | Что закупить |
-| GET | `/api/writeoffs?days=N` | Аналитика списаний |
-| POST | `/api/writeoffs` | Ручное списание просрочки |
+| POST | `/api/orders` | Создание заказа со списанием по FEFO |
+| POST | `/api/deliveries` | Приём поставки и создание партий |
+| GET | `/api/hot-offers` | Горячие предложения с объяснением скоринга |
+| GET | `/api/restock` | Продукты, которые нужно пополнить |
+| GET | `/api/writeoffs?days=30` | Аналитика списаний за период |
+| POST | `/api/writeoffs` | Ручное списание просроченных партий |
 
 Примеры:
 
 ```powershell
-Invoke-RestMethod http://localhost:8081/health
-Invoke-RestMethod http://localhost:8081/api/products
-Invoke-RestMethod http://localhost:8081/api/dishes
+Invoke-RestMethod https://restaurant-api-production.up.railway.app/health
+Invoke-RestMethod https://restaurant-api-production.up.railway.app/api/products
+Invoke-RestMethod https://restaurant-api-production.up.railway.app/api/dishes
 ```
 
-### Примеры запросов
-
-**Создание поставки:**
+### Создание поставки
 
 ```json
 {
@@ -231,7 +197,7 @@ Invoke-RestMethod http://localhost:8081/api/dishes
 }
 ```
 
-**Создание заказа:**
+### Создание заказа
 
 ```json
 {
@@ -242,13 +208,12 @@ Invoke-RestMethod http://localhost:8081/api/dishes
 }
 ```
 
-**Списание просрочки (все партии):**
+Ответ при успехе: `201 Created`, статус `created`, список `write_offs` — из каких партий списано.
+Ответ при нехватке: `409 Conflict`, статус `rejected`, `reason` и список `shortages`.
 
-```json
-{}
-```
+### Списание просрочки
 
-**Списание конкретных партий:**
+Пустое тело — все просроченные партии. Или конкретные:
 
 ```json
 { "batch_ids": ["UUID-1", "UUID-2"] }
@@ -279,55 +244,6 @@ Invoke-RestMethod http://localhost:8081/api/dishes
 - **`numeric(12,3)`** вместо `float` — точная арифметика граммов/миллилитров.
 - **`uuid`** как внешние идентификаторы.
 
-## Миграции
-
-Миграции в `backend/migrations/`, совместимы с `golang-migrate`.
-
-Накатить:
-
-```bash
-migrate -path ./migrations -database "$DATABASE_URL" up
-```
-
-Откатить всё:
-
-```bash
-migrate -path ./migrations -database "$DATABASE_URL" down -all
-```
-
-## Правила работы в команде
-
-### Ветки
-
-| Ветка | Назначение |
-|-------|------------|
-| `main` | Стабильная. Только через Pull Request. |
-| `dev` | Основная для разработки. |
-
-
-### Workflow
-
-```bash
-git checkout dev
-git pull origin dev
-git checkout -b feature/my-task
-# ... работаешь ...
-git add .
-git commit -m "feat: my task"
-git push -u origin feature/my-task
-# На GitHub: PR feature/my-task → dev
-```
-
-Когда проект готов — PR `dev → main`.
-
-### Правила
-
-1. **Пароль Supabase** и `project-ref` — в личке, не в Git.
-2. **Миграции накатывает один человек** — владелец проекта Supabase.
-3. **Порт 8081** для бэкенда — одинаковый у всех.
-4. **`.env` никогда не коммитится.** Если попал — смени пароль Supabase в **Project Settings → Database → Reset password**.
-5. **Не используй production `DATABASE_URL` как `TEST_DATABASE_URL`.**
-
 ## Горячие предложения
 
 Скор блюда по ингредиентам:
@@ -344,25 +260,119 @@ score(dish) = Σ по ингредиентам  срочность(партии)
 
 Алгоритм — чистая функция `scoreHotOffers`, покрыт unit-тестами (`hot_offers_test.go`).
 
-## Текущее состояние и следующие шаги
+## Тесты backend
+
+- **Unit-тесты** — бизнес-логика без БД: `normalizeOrder`, `scoreHotOffers`, `suggestQuantity`, типы ошибок, парсинг env.
+- **Integration-тесты** — SQL, транзакции, FEFO, конкурентность, схема БД. Требуют **отдельной** тестовой БД.
+- **Тесты миграций** — `up`/`down`/`up`, seed-данные, ограничения схемы.
+
+**Покрытие (последний прогон CI):**
+
+| Пакет | Покрытие |
+|-------|----------|
+| `internal/db` | 100.0% |
+| `internal/services` | 91.4% |
+| `internal/handlers` | 78.8% |
+| `cmd/api` | 43.8% |
+| `internal/models` | — (только DTO) |
+| `internal/testutil` | — (тестовые хелперы) |
+
+> **Не используй production `DATABASE_URL` как `TEST_DATABASE_URL`.** Тестовая утилита создаёт и удаляет отдельные схемы, но безопаснее держать тестовую БД полностью отдельно.
+
+### Запуск на Windows (PowerShell)
+
+```powershell
+cd backend
+
+# 1. Поднять временную PostgreSQL 17 в Docker
+docker compose -f docker-compose.test.yml up -d
+
+# 2. Указать адрес и обязательный режим интеграционных тестов
+$env:TEST_DATABASE_URL = "postgresql://test:test@127.0.0.1:5433/restaurant_test?sslmode=disable"
+$env:TEST_REQUIRE_DB = "1"
+
+# 3. Прогнать проверки
+go vet ./...
+go test ./... -count=1 -v
+
+# С детектором гонок, как в CI:
+go test ./... -race -count=1 -coverprofile=coverage.out
+go tool cover -func=coverage.out | Select-Object -Last 1
+
+# 4. Остановить контейнер
+docker compose -f docker-compose.test.yml down
+Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue
+Remove-Item Env:TEST_REQUIRE_DB -ErrorAction SilentlyContinue
+```
+
+Тестовая БД использует `tmpfs` — данные не сохраняются между запусками.
+
+## CI в GitHub Actions
+
+Workflow: `.github/workflows/backend-tests.yml`. На `push` и `pull_request` (при изменениях в `backend/**` или в самом workflow):
+
+1. Поднимает временный PostgreSQL 17 service container.
+2. Выставляет `TEST_DATABASE_URL` и `TEST_REQUIRE_DB=1` — интеграционные тесты не могут молча пропуститься.
+3. Устанавливает Go из `backend/go.mod`.
+4. Запускает `go vet ./...`.
+5. Запускает `go test ./... -race -count=1 -coverprofile=coverage.out`.
+6. Выводит итоговое покрытие.
+
+Проверить: GitHub → вкладка **Actions** → workflow `backend-tests` → job `test`.
+
+CI не требует Supabase secrets — использует свою временную БД.
+
+## Деплой
+
+Backend и frontend живут на **Railway** (два сервиса из одного репозитория), БД — на **Supabase**.
+
+- Backend: `backend/Dockerfile` (multi-stage, ~20 МБ).
+- Frontend: `frontend/Dockerfile` + `frontend/Caddyfile` (сборка Vite + раздача статики Caddy).
+- Railway следит за веткой **`dev`** и деплоит при push.
+- `VITE_API_URL` для фронта вшивается на этапе сборки — адрес бэкенда + `/api`.
+
+
+
+## Правила работы в команде
+
+### Ветки
+
+| Ветка | Назначение |
+|-------|------------|
+| `main` | Стабильная. Только через Pull Request. |
+| `dev` | Основная для разработки и деплоя на Railway. |
+
+
+### Workflow
+
+```bash
+git checkout dev
+git pull origin dev
+git checkout -b feature/my-task
+# ... работаешь ...
+git add .
+git commit -m "feat: my task"
+git push -u origin feature/my-task
+# На GitHub: PR feature/my-task → dev
+```
+
+
+## Текущее состояние
 
 - [x] Backend API и бизнес-логика склада
 - [x] SQL-миграции и seed-данные
 - [x] Unit- и PostgreSQL integration-тесты backend
 - [x] Локальный запуск тестовой БД через Docker Compose
 - [x] GitHub Actions workflow: `go vet`, `go test -race`, покрытие
-- [x] Web frontend
-- [x] Mobile-приложение
-- [ ] Проверить зелёный запуск CI в GitHub после первого push workflow и тестов
-- [ ] Подготовить production Dockerfile и проверить сборку контейнера
-- [ ] Развернуть backend на Railway, оставив Supabase основной БД
-- [ ] Настроить безопасный порядок применения миграций и health check при деплое
-- [ ] Отдельно настроить CI для frontend/mobile
+- [x] Web frontend с дашбордом, формами и аналитикой
+- [x] Mobile-приложение (Expo / React Native)
+- [x] Деплой backend и frontend на Railway
+- [x] Supabase как production БД
 
-Деплой пока не настроен: перед публикацией нужен Dockerfile, проверка production-конфигурации и уверенность, что миграции не затрагивают данные неожиданным образом.
 
 ## Полезные ссылки
 
 - Репозиторий: https://github.com/IIgiyuuII/restaurant
 - Supabase Dashboard: https://supabase.com/dashboard
+- Railway: https://railway.com
 - golang-migrate: https://github.com/golang-migrate/migrate
