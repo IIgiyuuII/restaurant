@@ -41,6 +41,9 @@ func New(pool *pgxpool.Pool, expiry *services.ExpiryService) *API {
 
 // Mount регистрирует маршруты на роутере.
 func (a *API) Mount(r chi.Router) {
+	r.Get("/health", a.health)
+	r.Get("/api/products", a.listProducts)
+	r.Get("/api/stoplist", a.listStoplist)
 	r.Post("/api/deliveries", a.createDelivery)
 	r.Post("/api/orders", a.createOrder)
 	r.Get("/api/dishes", a.listDishes)
@@ -50,6 +53,69 @@ func (a *API) Mount(r chi.Router) {
 	r.Get("/api/restock", a.listRestock)
 	r.Get("/api/writeoffs", a.expiryReport)
 	r.Post("/api/writeoffs", a.writeOffExpired)
+}
+
+// health проверяет, что бэкенд жив и видит базу.
+func (a *API) health(w http.ResponseWriter, r *http.Request) {
+	if err := a.pool.Ping(r.Context()); err != nil {
+		log.Printf("health: db ping failed: %v", err)
+		http.Error(w, "db down", http.StatusInternalServerError)
+		return
+	}
+	_, _ = w.Write([]byte("ok"))
+}
+
+// listProducts — остатки по продуктам (живые непросроченные партии).
+func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
+	rows, err := a.pool.Query(r.Context(),
+		`SELECT product_id, name, unit, total_quantity::float8, nearest_expiry
+		   FROM product_stock ORDER BY name`)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	defer rows.Close()
+
+	out := []models.ProductStock{}
+	for rows.Next() {
+		var p models.ProductStock
+		if err := rows.Scan(&p.ID, &p.Name, &p.Unit, &p.Quantity, &p.NearestExpiry); err != nil {
+			writeServiceError(w, err)
+			return
+		}
+		out = append(out, p)
+	}
+	if err := rows.Err(); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// listStoplist — блюда, которые нельзя приготовить (portions = 0).
+func (a *API) listStoplist(w http.ResponseWriter, r *http.Request) {
+	rows, err := a.pool.Query(r.Context(),
+		`SELECT dish_id, name, portions FROM dish_availability WHERE portions = 0 ORDER BY name`)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	defer rows.Close()
+
+	out := []models.StopDish{}
+	for rows.Next() {
+		var d models.StopDish
+		if err := rows.Scan(&d.ID, &d.Name, &d.Portions); err != nil {
+			writeServiceError(w, err)
+			return
+		}
+		out = append(out, d)
+	}
+	if err := rows.Err(); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (a *API) createDelivery(w http.ResponseWriter, r *http.Request) {
