@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import axios from 'axios';
@@ -19,6 +20,7 @@ type Props = {
 };
 
 const MAX_PER_DISH = 100;
+const PAGE_SIZE = 10;
 
 export default function OrdersPage({
   dishes,
@@ -30,10 +32,24 @@ export default function OrdersPage({
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<OrderResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  // Пагинация истории заказов.
+  const totalPages = Math.max(1, Math.ceil(history.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const pageHistory = history.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
   // Эффективное количество: не больше доступных порций.
   const qtyOf = (d: Dish) =>
-    Math.min(cart[d.id] ?? 0, Math.max(d.portions, 0), MAX_PER_DISH);
+    Math.min(
+      cart[d.id] ?? 0,
+      Math.max(d.portions, 0),
+      MAX_PER_DISH,
+    );
 
   const lines = dishes.filter((d) => qtyOf(d) > 0);
   const total = lines.reduce((sum, d) => sum + d.price * qtyOf(d), 0);
@@ -126,6 +142,7 @@ export default function OrdersPage({
                   <div className="mt-1 text-xs">
                     {stopped ? (
                       <span className="inline-flex items-center gap-1 text-red-400">
+                        <Icon name="ban" size={13} />
                         В стоп-листе
                       </span>
                     ) : (
@@ -180,7 +197,7 @@ export default function OrdersPage({
         </section>
 
         {/* Правая колонка — заказ.
-            На больших экранах верх совпадает с верхом карточек меню. */}
+            На больших экранах верх окна совпадает с верхом карточек меню. */}
         <aside className="min-w-0 mt-0 xl:mt-[35px] self-start rounded-2xl border border-gray-800 bg-surface p-4">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
@@ -285,7 +302,7 @@ export default function OrdersPage({
         />
       )}
 
-      {/* История заказов */}
+      {/* История заказов с пагинацией */}
       <section>
         <h2 className="text-base font-semibold text-gray-100 mb-3">
           Последние заказы
@@ -296,75 +313,117 @@ export default function OrdersPage({
             Заказов пока нет
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-surface">
-            <table className="w-full min-w-[700px] text-sm">
-              <thead>
-                <tr className="bg-inset text-left text-xs text-gray-500">
-                  <th className="px-4 py-3 font-medium">№</th>
-                  <th className="px-4 py-3 font-medium">Время</th>
-                  <th className="px-4 py-3 font-medium">Состав</th>
-                  <th className="px-4 py-3 text-right font-medium">
-                    Выручка
-                  </th>
-                  <th className="px-4 py-3 font-medium">Статус</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {history.map((o) => (
-                  <tr
-                    key={o.id}
-                    className="border-b border-gray-900 align-top"
-                  >
-                    <td className="px-4 py-3 font-mono text-gray-400">
-                      {o.number}
-                    </td>
-
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-400">
-                      {formatDate(o.created_at)}
-                    </td>
-
-                    <td className="px-4 py-3 text-gray-200">
-                      {o.items
-                        .map((i) => `${i.name} × ${i.quantity}`)
-                        .join(', ')}
-                    </td>
-
-                    <td className="px-4 py-3 text-right font-mono whitespace-nowrap text-gray-200">
-                      {o.status === 'created' ? (
-                        <>
-                          {o.revenue_estimated ? '≈ ' : ''}
-                          {formatMoney(o.revenue)}
-                        </>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      {o.status === 'created' ? (
-                        <span className="inline-flex rounded-md border border-emerald-800 bg-emerald-950/60 px-2 py-0.5 text-xs text-emerald-300">
-                          оформлен
-                        </span>
-                      ) : (
-                        <div>
-                          <span className="inline-flex rounded-md border border-red-800 bg-red-950/60 px-2 py-0.5 text-xs text-red-300">
-                            отклонён
-                          </span>
-
-                          {o.reason && (
-                            <div className="mt-1 text-xs text-gray-500">
-                              {o.reason}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </td>
+          <>
+            <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-surface">
+            <table className="w-full min-w-[700px] table-fixed text-sm">
+              <colgroup>
+                <col className="w-[8%]" />
+                <col className="w-[19%]" />
+                <col className="w-[39%]" />
+                <col className="w-[17%]" />
+                <col className="w-[17%]" />
+              </colgroup>
+                <thead>
+                  <tr className="bg-inset text-left text-xs text-gray-500">
+                    <th className="px-4 py-3 font-medium">№</th>
+                    <th className="px-4 py-3 font-medium">Время</th>
+                    <th className="px-4 py-3 font-medium">Состав</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Выручка
+                    </th>
+                    <th className="px-4 py-3 font-medium">Статус</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {pageHistory.map((o) => (
+                    <tr
+                      key={o.id}
+                      className="border-b border-gray-900 align-top"
+                    >
+                      <td className="px-4 py-3 font-mono text-gray-400">
+                        {o.number}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-400">
+                        {formatDate(o.created_at)}
+                      </td>
+
+                      <td className="px-4 py-3 text-gray-200 break-words whitespace-normal">
+                        {o.items
+                          .map((i) => `${i.name} × ${i.quantity}`)
+                          .join(', ')}
+                      </td>
+
+                      <td className="px-4 py-3 text-right font-mono whitespace-nowrap text-gray-200">
+                        {o.status === 'created' ? (
+                          <>
+                            {o.revenue_estimated ? '≈ ' : ''}
+                            {formatMoney(o.revenue)}
+                          </>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        {o.status === 'created' ? (
+                          <span className="inline-flex rounded-md border border-emerald-800 bg-emerald-950/60 px-2 py-0.5 text-xs text-emerald-300">
+                            оформлен
+                          </span>
+                        ) : (
+                          <div>
+                            <span className="inline-flex rounded-md border border-red-800 bg-red-950/60 px-2 py-0.5 text-xs text-red-300">
+                              отклонён
+                            </span>
+
+                            {o.reason && (
+                              <div className="mt-1 text-xs text-gray-500">
+                                {o.reason}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Управление страницами */}
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-gray-500">
+                Показано {(currentPage - 1) * PAGE_SIZE + 1}–
+                {Math.min(currentPage * PAGE_SIZE, history.length)} из{' '}
+                {history.length} заказов
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  ← Назад
+                </button>
+
+                <span className="min-w-20 text-center text-sm text-gray-400">
+                  {currentPage} / {totalPages}
+                </span>
+
+                <button
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-hover disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Далее →
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </section>
     </div>

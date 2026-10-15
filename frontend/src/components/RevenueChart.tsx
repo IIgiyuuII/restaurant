@@ -10,8 +10,9 @@ const compactMoney = (value: number) => new Intl.NumberFormat('ru-RU', {
   maximumFractionDigits: 1,
 }).format(value);
 
-export default function RevenueChart() {
-  const [days, setDays] = useState<7 | 30>(7);
+type Props = { days: 7 | 30 };
+
+export default function RevenueChart({ days }: Props) {
   const [data, setData] = useState<RevenueDay[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,14 +67,7 @@ export default function RevenueChart() {
           <div className="mt-1 text-2xl font-semibold tracking-tight text-gray-100 sm:text-3xl">{formatMoney(total)}</div>
           <div className="mt-1 text-xs text-gray-500">По успешно оформленным заказам · {days} дней</div>
         </div>
-        <div className="flex shrink-0 rounded-xl border border-gray-800 bg-inset p-1" aria-label="Период выручки">
-          {([7, 30] as const).map((value) => (
-            <button key={value} onClick={() => setDays(value)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${days === value ? 'bg-emerald-400/15 text-emerald-300 shadow-sm' : 'text-gray-400 hover:text-gray-100'}`}>
-              {value} дней
-            </button>
-          ))}
-        </div>
+
       </div>
 
       {error ? <div className="mt-5 rounded-xl border border-rose-900/50 bg-rose-400/[0.06] p-4 text-sm text-rose-200">{error}</div> : loading ? (

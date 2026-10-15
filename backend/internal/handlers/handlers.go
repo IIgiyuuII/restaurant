@@ -240,13 +240,8 @@ func (a *API) listBatches(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// listOrders — последние заказы (по умолчанию 20, максимум 100): ?limit=N.
+// listOrders — вся история заказов, от новых к старым.
 func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
-	limit := 20
-	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && v > 0 && v <= 100 {
-		limit = v
-	}
-
 	rows, err := a.pool.Query(r.Context(),
 		`SELECT o.id, o.number, o.status, COALESCE(o.reason, ''), o.created_at,
 		        o.revenue::float8, o.revenue_estimated,
@@ -259,8 +254,7 @@ func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
 		   LEFT JOIN order_items oi ON oi.order_id = o.id
 		   LEFT JOIN dishes d       ON d.id = oi.dish_id
 		  GROUP BY o.id
-		  ORDER BY o.number DESC
-		  LIMIT $1`, limit)
+		  ORDER BY o.number DESC`)
 	if err != nil {
 		writeServiceError(w, err)
 		return

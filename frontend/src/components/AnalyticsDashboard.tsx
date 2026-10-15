@@ -99,8 +99,14 @@ function OrdersTrend({ history, days }: { history: OrderHistoryEntry[]; days: nu
 }
 
 export default function AnalyticsDashboard({ products, stoplist, batches, history, hotOffers, restock, report, onNavigate }: Props) {
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState<7 | 30>(7);
   const emptyProducts = products.filter((p) => p.quantity === 0).length;
+  const periodHistory = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (days - 1));
+    return history.filter((order) => new Date(order.created_at).getTime() >= start.getTime());
+  }, [history, days]);
   const expiry = useMemo(() => {
     const result = { overdue: 0, within24: 0, within72: 0, safe: 0 };
     for (const batch of batches) {
@@ -115,12 +121,12 @@ export default function AnalyticsDashboard({ products, stoplist, batches, histor
 
   const topDishes = useMemo(() => {
     const totals = new Map<string, number>();
-    for (const order of history) {
+    for (const order of periodHistory) {
       if (order.status !== 'created') continue;
       for (const item of order.items ?? []) totals.set(item.name, (totals.get(item.name) ?? 0) + item.quantity);
     }
     return [...totals].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 6);
-  }, [history]);
+  }, [periodHistory]);
 
   const lowStock = useMemo(() => restock.slice().sort((a, b) => b.suggested_quantity - a.suggested_quantity).slice(0, 6)
     .map((item) => ({ label: item.name, value: item.status === 'out' ? 0 : item.quantity / Math.max(1, item.min_stock) * 100, status: item.status })), [restock]);
@@ -139,7 +145,7 @@ export default function AnalyticsDashboard({ products, stoplist, batches, histor
         <p className="mt-2 max-w-2xl text-sm text-gray-400">Склад, доступность меню, заказы и потери — ключевые сигналы для ежедневных решений.</p>
       </div>
       <div className="flex items-center gap-2 self-start rounded-xl border border-gray-800 bg-surface p-1 sm:self-auto" aria-label="Период графика заказов">
-        {[7, 30].map((value) => <button key={value} onClick={() => setDays(value)} className={'rounded-lg px-3 py-2 text-xs font-medium transition-colors ' + (days === value ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:bg-hover hover:text-gray-100')}>{value} дней</button>)}
+        {([7, 30] as const).map((value) => <button key={value} onClick={() => setDays(value)} className={'rounded-lg px-3 py-2 text-xs font-medium transition-colors ' + (days === value ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:bg-hover hover:text-gray-100')}>{value} дней</button>)}
       </div>
     </div>
 
@@ -151,9 +157,9 @@ export default function AnalyticsDashboard({ products, stoplist, batches, histor
     </div>
 
     <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-      <RevenueChart />
+      <RevenueChart days={days} />
       <Panel title="Динамика заказов" subtitle={`Количество заказов по дням · выбранный период ${days} дней`} className="h-full">
-        <OrdersTrend history={history} days={days} />
+        <OrdersTrend history={periodHistory} days={days} />
       </Panel>
     </div>
 
@@ -189,8 +195,8 @@ export default function AnalyticsDashboard({ products, stoplist, batches, histor
     </div>
 
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <Panel title="Самые востребованные блюда" subtitle="Количество порций в успешных заказах из загруженной истории.">
-        <BarChart items={topDishes} valueLabel="порций в истории заказов" color="#818cf8" />
+      <Panel title="Самые востребованные блюда" subtitle={`Количество порций в успешных заказах за ${days} дней.`}>
+        <BarChart items={topDishes} valueLabel={`порций за ${days} дней`} color="#818cf8" />
       </Panel>
       <Panel title="Что нужно пополнить" subtitle="Позиции из рекомендаций склада; шкала показывает остаток относительно минимального запаса.">
         {lowStock.length ? <div className="space-y-3">
