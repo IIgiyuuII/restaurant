@@ -63,9 +63,10 @@ export default function StopList({ dishes, compact, onAll }: Props) {
                 <td className="px-4 py-3 font-medium text-gray-100">{d.name}</td>
                 {hasCategory && <td className="px-4 py-3 text-gray-400">{d.category ?? '—'}</td>}
                 <td className="px-4 py-3 text-gray-300">
-                  <span className="inline-flex items-start gap-2 rounded-lg border border-rose-700/80 bg-rose-950/80 px-3 py-2 text-xs font-medium leading-relaxed text-rose-100 shadow-sm shadow-rose-950/30">
-                    <Icon name="alertTriangle" size={14} className="mt-0.5 shrink-0 text-rose-300" />
-                    <span>{d.reason || 'Недостаточно доступных ингредиентов для приготовления.'}</span>
+                  <span className="inline-flex items-start gap-2 rounded-lg border border-gray-700/70 bg-inset px-3 py-2 text-xs font-medium leading-relaxed text-gray-300">
+                    <span>
+                      {d.reason || 'Недостаточно доступных ингредиентов для приготовления.'}
+                    </span>
                   </span>
                 </td>
                 {hasDate && <td className="px-4 py-3 whitespace-nowrap text-gray-400">{d.stopped_at ? formatDate(d.stopped_at) : '—'}</td>}

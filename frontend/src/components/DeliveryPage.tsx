@@ -233,7 +233,7 @@ export default function DeliveryPage({ products, restock, onChanged }: Props) {
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2 font-semibold text-emerald-300">
-                <Icon name="checkCircle" size={20} />
+
                 Поставка принята
               </div>
               <div className="mt-1 break-all font-mono text-sm text-gray-400">{result.number}</div>
@@ -563,7 +563,6 @@ function RestockGroup({
                   </div>
                   {it.blocked_dishes > 0 && (
                     <div className="mt-1 flex items-center gap-1.5 text-xs text-red-400">
-                      <Icon name="ban" size={13} />
                       <span>
                         Из-за продукта не готовятся {it.blocked_dishes}{' '}
                         {plural(it.blocked_dishes, ['блюдо', 'блюда', 'блюд'])}
