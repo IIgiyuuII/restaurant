@@ -14,9 +14,10 @@ type CreateOrderRequest struct {
 }
 
 type OrderItemView struct {
-	DishID   string `json:"dish_id"`
-	Name     string `json:"name"`
-	Quantity int    `json:"quantity"`
+	DishID    string  `json:"dish_id"`
+	Name      string  `json:"name"`
+	Quantity  int     `json:"quantity"`
+	UnitPrice float64 `json:"unit_price"`
 }
 
 // WriteOff — сколько и из какой партии списано (виден порядок FEFO).
@@ -40,14 +41,16 @@ type Shortage struct {
 
 // OrderResponse — результат обработки заказа (created или rejected).
 type OrderResponse struct {
-	ID        string          `json:"id"`
-	Number    int64           `json:"number"`
-	Status    string          `json:"status"` // created | rejected
-	Reason    string          `json:"reason,omitempty"`
-	CreatedAt time.Time       `json:"created_at"`
-	Items     []OrderItemView `json:"items"`
-	WriteOffs []WriteOff      `json:"write_offs,omitempty"`
-	Shortages []Shortage      `json:"shortages,omitempty"`
+	ID               string          `json:"id"`
+	Number           int64           `json:"number"`
+	Status           string          `json:"status"` // created | rejected
+	Reason           string          `json:"reason,omitempty"`
+	CreatedAt        time.Time       `json:"created_at"`
+	Revenue          float64         `json:"revenue"`
+	RevenueEstimated bool            `json:"revenue_estimated"`
+	Items            []OrderItemView `json:"items"`
+	WriteOffs        []WriteOff      `json:"write_offs,omitempty"`
+	Shortages        []Shortage      `json:"shortages,omitempty"`
 }
 
 // DishAvailability — блюдо с количеством доступных порций (0 = стоп-лист).
@@ -56,4 +59,11 @@ type DishAvailability struct {
 	Name     string  `json:"name"`
 	Price    float64 `json:"price"`
 	Portions int     `json:"portions"`
+}
+
+// RevenueDay — выручка успешных заказов за календарный день.
+type RevenueDay struct {
+	Date    string  `json:"date"`
+	Revenue float64 `json:"revenue"`
+	Orders  int     `json:"orders"`
 }

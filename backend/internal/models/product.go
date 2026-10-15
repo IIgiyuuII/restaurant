@@ -16,4 +16,5 @@ type StopDish struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Portions int    `json:"portions"`
+	Reason   string `json:"reason"`
 }
