@@ -260,35 +260,36 @@ func TestOrdersHistory(t *testing.T) {
 	wantKeys(t, keys(t, firstElem(t, rec)), "id", "number", "status", "created_at", "revenue", "revenue_estimated", "items")
 }
 
-func TestOrdersHistory_Limit(t *testing.T) {
-	a := newApp(t)
-	for i := 0; i < 25; i++ {
-		a.d.Exec(`INSERT INTO orders DEFAULT VALUES`)
-	}
-	cases := []struct {
-		query string
-		want  int
-	}{
-		{"", 20}, // по умолчанию
-		{"?limit=5", 5},
-		{"?limit=25", 25},
-		{"?limit=100", 25}, // верхняя граница допустима
-		{"?limit=0", 20},   // некорректные → по умолчанию
-		{"?limit=-3", 20},
-		{"?limit=abc", 20},
-		{"?limit=101", 20}, // больше максимума → по умолчанию
-	}
-	for _, c := range cases {
-		list := decode[[]models.OrderHistory](t, a.get("/api/orders"+c.query))
-		if len(list) != c.want {
-			t.Errorf("%q: %d заказов, ожидали %d", c.query, len(list), c.want)
-		}
-	}
-	// Заказ без позиций — items = [] (не null).
-	first := decode[[]map[string]any](t, a.get("/api/orders?limit=1"))
-	if items, ok := first[0]["items"].([]any); !ok || len(items) != 0 {
-		t.Errorf("items пустого заказа: %#v", first[0]["items"])
-	}
+// TestOrdersHistory_ReturnsAll — эндпоинт отдаёт всю историю,
+// без LIMIT. Фронт пагинирует её локально.
+func TestOrdersHistory_ReturnsAll(t *testing.T) {
+    a := newApp(t)
+
+    // Пустая история — [] (не null), чтобы фронт мог .map без проверок.
+    assertEmptyArray(t, a.get("/api/orders"))
+
+    // Создаём 25 заказов и проверяем, что все вернутся.
+    for i := 0; i < 25; i++ {
+        a.d.Exec(`INSERT INTO orders DEFAULT VALUES`)
+    }
+
+    list := decode[[]models.OrderHistory](t, a.get("/api/orders"))
+    if len(list) != 25 {
+        t.Fatalf("получено %d заказов, ожидали все 25 (эндпоинт без LIMIT)", len(list))
+    }
+
+    // Новые первыми — фронт полагается на порядок.
+    for i := 1; i < len(list); i++ {
+        if list[i-1].Number <= list[i].Number {
+            t.Fatalf("порядок нарушен: %d, %d", list[i-1].Number, list[i].Number)
+        }
+    }
+
+    // `?limit=N` теперь игнорируется — проверяем, что контракт это фиксирует.
+    limited := decode[[]models.OrderHistory](t, a.get("/api/orders?limit=5"))
+    if len(limited) != 25 {
+        t.Fatalf("параметр ?limit больше не должен ограничивать: получено %d, ожидали 25", len(limited))
+    }
 }
 
 // ---------------- /api/hot-offers ----------------
