@@ -6,7 +6,7 @@ import StockTable from './components/StockTable';
 import StopList from './components/StopList';
 import OrdersPage from './components/OrdersPage';
 import HotOffersPage from './components/HotOffersPage';
-import HotOfferCard from './components/HotOfferCard';
+//import HotOfferCard from './components/HotOfferCard';
 import DeliveryPage from './components/DeliveryPage';
 import WriteoffsPage from './components/WriteoffsPage';
 import Background from './components/Background';
@@ -96,19 +96,27 @@ export default function App() {
       [o.dish_id]: Math.min((prev[o.dish_id] ?? 0) + 1, o.portions),
     }));
 
-  const emptyProducts = products.filter((p) => p.quantity === 0).length;
+  //const emptyProducts = products.filter((p) => p.quantity === 0).length;
 
   // Считаем по партиям: срок годности — свойство партии, а не продукта.
-  const { expiringSoon, expired } = useMemo(() => {
-    let soon = 0;
-    let gone = 0;
-    for (const b of batches) {
-      const h = hoursUntil(b.expires_at);
-      if (h <= 0) gone++;
-      else if (h < 24) soon++;
-    }
-    return { expiringSoon: soon, expired: gone };
-  }, [batches]);
+  //const { expiringSoon, expired } = useMemo(() => {
+    //let soon = 0;
+    //let gone = 0;
+    //for (const b of batches) {
+      //const h = hoursUntil(b.expires_at);
+      //if (h <= 0) gone++;
+      //else if (h < 24) soon++;
+    //}
+    //return { expiringSoon: soon, expired: gone };
+  //}, [batches]);
+
+  const expired = useMemo(() => {
+  let gone = 0;
+  for (const b of batches) {
+    if (hoursUntil(b.expires_at) <= 0) gone++;
+  }
+  return gone;
+}, [batches]);
 
   const titles: Record<string, { title: string; subtitle?: string }> = {
     dashboard: { title: 'Дашборд', subtitle: 'Обзор склада и стоп-листа' },
