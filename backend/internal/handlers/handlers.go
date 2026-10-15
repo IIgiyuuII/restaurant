@@ -49,6 +49,7 @@ func (a *API) Mount(r chi.Router) {
 	r.Get("/api/dishes", a.listDishes)
 	r.Get("/api/batches", a.listBatches)
 	r.Get("/api/orders", a.listOrders)
+	r.Get("/api/analytics/revenue", a.revenueByDay)
 	r.Get("/api/hot-offers", a.listHotOffers)
 	r.Get("/api/restock", a.listRestock)
 	r.Get("/api/writeoffs", a.expiryReport)
@@ -92,10 +93,32 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// listStoplist — блюда, которые нельзя приготовить (portions = 0).
+// listStoplist — блюда, которые нельзя приготовить, с причиной: каких ингредиентов не хватает.
+// Формат reason сохранён совместимым с прежним API, который использовал интерфейс стоп-листа.
 func (a *API) listStoplist(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.pool.Query(r.Context(),
-		`SELECT dish_id, name, portions FROM dish_availability WHERE portions = 0 ORDER BY name`)
+		`SELECT da.dish_id, da.name, da.portions,
+		        'Не хватает: ' || string_agg(
+		            p.name || ' (нужно ' || trim_scale(di.quantity)::text || ' ' || COALESCE(u.label, p.unit)
+		                   || ', есть ' || trim_scale(COALESCE(ps.total_quantity, 0))::text || ' ' || COALESCE(u.label, p.unit)
+		                   || CASE WHEN COALESCE(ex.qty, 0) > 0
+		                           THEN ', ещё ' || trim_scale(ex.qty)::text || ' ' || COALESCE(u.label, p.unit) || ' просрочено'
+		                           ELSE '' END
+		                   || ')',
+		            '; ' ORDER BY p.name) AS reason
+		   FROM dish_availability da
+		   JOIN dish_ingredients di ON di.dish_id = da.dish_id
+		   JOIN products p ON p.id = di.product_id
+		   LEFT JOIN (VALUES ('g', 'г'), ('ml', 'мл'), ('pcs', 'шт')) u(unit, label) ON u.unit = p.unit
+		   LEFT JOIN product_stock ps ON ps.product_id = di.product_id
+		   LEFT JOIN (SELECT product_id, sum(remaining_quantity) AS qty
+		                FROM batches
+		               WHERE status = 'active' AND remaining_quantity > 0 AND expires_at <= now()
+		               GROUP BY product_id) ex ON ex.product_id = di.product_id
+		  WHERE da.portions = 0
+		    AND COALESCE(ps.total_quantity, 0) < di.quantity
+		  GROUP BY da.dish_id, da.name, da.portions
+		  ORDER BY da.name`)
 	if err != nil {
 		writeServiceError(w, err)
 		return
@@ -105,7 +128,7 @@ func (a *API) listStoplist(w http.ResponseWriter, r *http.Request) {
 	out := []models.StopDish{}
 	for rows.Next() {
 		var d models.StopDish
-		if err := rows.Scan(&d.ID, &d.Name, &d.Portions); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.Portions, &d.Reason); err != nil {
 			writeServiceError(w, err)
 			return
 		}
@@ -226,8 +249,10 @@ func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := a.pool.Query(r.Context(),
 		`SELECT o.id, o.number, o.status, COALESCE(o.reason, ''), o.created_at,
+		        o.revenue::float8, o.revenue_estimated,
 		        COALESCE(
-		          json_agg(json_build_object('name', d.name, 'quantity', oi.quantity)
+		          json_agg(json_build_object('name', d.name, 'quantity', oi.quantity,
+		                                     'unit_price', oi.unit_price::float8)
 		                   ORDER BY d.name) FILTER (WHERE d.id IS NOT NULL),
 		          '[]'::json)::text
 		   FROM orders o
@@ -246,7 +271,8 @@ func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var o models.OrderHistory
 		var itemsJSON string
-		if err := rows.Scan(&o.ID, &o.Number, &o.Status, &o.Reason, &o.CreatedAt, &itemsJSON); err != nil {
+		if err := rows.Scan(&o.ID, &o.Number, &o.Status, &o.Reason, &o.CreatedAt,
+			&o.Revenue, &o.RevenueEstimated, &itemsJSON); err != nil {
 			writeServiceError(w, err)
 			return
 		}
@@ -255,6 +281,44 @@ func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		out = append(out, o)
+	}
+	if err := rows.Err(); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// revenueByDay — выручка успешных заказов по дням. ?days=7|30 (по умолчанию 7).
+func (a *API) revenueByDay(w http.ResponseWriter, r *http.Request) {
+	days := 7
+	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && (v == 7 || v == 30) {
+		days = v
+	}
+	rows, err := a.pool.Query(r.Context(),
+		`WITH dates AS (
+		   SELECT generate_series(current_date - ($1::int - 1), current_date, interval '1 day')::date AS day
+		 )
+		 SELECT to_char(d.day, 'YYYY-MM-DD'),
+		        COALESCE(SUM(o.revenue), 0)::float8,
+		        COUNT(o.id)::int
+		   FROM dates d
+		   LEFT JOIN orders o ON o.created_at::date = d.day AND o.status = 'created'
+		  GROUP BY d.day
+		  ORDER BY d.day`, days)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	defer rows.Close()
+	out := []models.RevenueDay{}
+	for rows.Next() {
+		var item models.RevenueDay
+		if err := rows.Scan(&item.Date, &item.Revenue, &item.Orders); err != nil {
+			writeServiceError(w, err)
+			return
+		}
+		out = append(out, item)
 	}
 	if err := rows.Err(); err != nil {
 		writeServiceError(w, err)

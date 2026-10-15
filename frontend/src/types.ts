@@ -10,10 +10,11 @@ export type StopDish = {
   id: string;
   name: string;
   portions: number;
-  // Необязательные поля: если бэкенд их отдаёт, в таблице стоп-листа появятся колонки.
+  // Причина стоп-листа: список недостающих ингредиентов от API.
   category?: string;
   reason?: string;
   stopped_at?: string;
+  shortages?: Shortage[];
 };
 
 export type Dish = {
@@ -60,7 +61,9 @@ export type OrderResult = {
   status: 'created' | 'rejected';
   reason?: string;
   created_at: string;
-  items: { dish_id: string; name: string; quantity: number }[];
+  revenue: number;
+  revenue_estimated: boolean;
+  items: { dish_id: string; name: string; quantity: number; unit_price: number }[];
   write_offs?: WriteOff[];
   shortages?: Shortage[];
 };
@@ -71,7 +74,15 @@ export type OrderHistoryEntry = {
   status: 'created' | 'rejected';
   reason?: string;
   created_at: string;
-  items: { name: string; quantity: number }[];
+  revenue: number;
+  revenue_estimated: boolean;
+  items: { name: string; quantity: number; unit_price: number }[];
+};
+
+export type RevenueDay = {
+  date: string;
+  revenue: number;
+  orders: number;
 };
 
 export type HotReason = {

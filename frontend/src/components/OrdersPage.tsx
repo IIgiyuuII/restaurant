@@ -185,12 +185,13 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
           <div className="text-sm text-gray-500">Заказов пока нет</div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-gray-800 bg-surface">
-            <table className="w-full min-w-[520px] text-sm">
+            <table className="w-full min-w-[700px] text-sm">
               <thead>
                 <tr className="text-left text-xs text-gray-500 bg-inset">
                   <th className="px-4 py-3 font-medium">№</th>
                   <th className="px-4 py-3 font-medium">Время</th>
                   <th className="px-4 py-3 font-medium">Состав</th>
+                  <th className="px-4 py-3 font-medium text-right">Выручка</th>
                   <th className="px-4 py-3 font-medium">Статус</th>
                 </tr>
               </thead>
@@ -203,6 +204,9 @@ export default function OrdersPage({ dishes, history, cart, setCart, onChanged }
                     </td>
                     <td className="px-4 py-3 text-gray-200">
                       {o.items.map((i) => `${i.name} × ${i.quantity}`).join(', ')}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono whitespace-nowrap text-gray-200">
+                      {o.status === 'created' ? <>{o.revenue_estimated ? '≈ ' : ''}{formatMoney(o.revenue)}</> : '—'}
                     </td>
                     <td className="px-4 py-3">
                       {o.status === 'created' ? (

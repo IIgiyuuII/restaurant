@@ -109,7 +109,10 @@ func TestStoplist(t *testing.T) {
 			t.Errorf("%+v", d)
 		}
 	}
-	wantKeys(t, keys(t, firstElem(t, rec)), "id", "name", "portions")
+	wantKeys(t, keys(t, firstElem(t, rec)), "id", "name", "portions", "reason")
+	if list[0].Reason == "" || !strings.Contains(list[0].Reason, "Бекон") {
+		t.Errorf("причина стоп-листа должна содержать название недостающего ингредиента, получили %q", list[0].Reason)
+	}
 
 	// Поставка бекона снимает блюдо со стоп-листа.
 	a.d.Batch(bacon, 100, 48)
@@ -254,7 +257,7 @@ func TestOrdersHistory(t *testing.T) {
 	if len(list[1].Items) != 2 || list[1].Items[0].Name != "Омлет" || list[1].Items[1].Name != "Тост" || list[1].Items[1].Quantity != 2 {
 		t.Errorf("позиции: %+v", list[1].Items)
 	}
-	wantKeys(t, keys(t, firstElem(t, rec)), "id", "number", "status", "created_at", "items")
+	wantKeys(t, keys(t, firstElem(t, rec)), "id", "number", "status", "created_at", "revenue", "revenue_estimated", "items")
 }
 
 func TestOrdersHistory_Limit(t *testing.T) {
