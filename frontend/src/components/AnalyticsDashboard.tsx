@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { Batch, ExpiryReport, OrderHistoryEntry, Product, RestockItem, StopDish } from '../types';
+import type { Batch, ExpiryReport, HotOffer, OrderHistoryEntry, Product, RestockItem, StopDish } from '../types';
 import StatCard from './StatCard';
 import DonutChart from './DonutChart';
 import RevenueChart from './RevenueChart';
@@ -11,7 +11,7 @@ type Props = {
   stoplist: StopDish[];
   batches: Batch[];
   history: OrderHistoryEntry[];
-  //hotOffers: HotOffer[];
+  hotOffers: HotOffer[];
   restock: RestockItem[];
   report: ExpiryReport | null;
   onNavigate: (tab: string) => void;
@@ -98,7 +98,7 @@ function OrdersTrend({ history, days }: { history: OrderHistoryEntry[]; days: nu
   </div>;
 }
 
-export default function AnalyticsDashboard({ products, stoplist, batches, history, restock, report, onNavigate }: Props) {
+export default function AnalyticsDashboard({ products, stoplist, batches, history, hotOffers, restock, report, onNavigate }: Props) {
   const [days, setDays] = useState(7);
   const emptyProducts = products.filter((p) => p.quantity === 0).length;
   const expiry = useMemo(() => {
