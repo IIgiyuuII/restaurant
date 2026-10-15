@@ -1,0 +1,46 @@
+name: backend-tests
+
+on:
+  push:
+    paths: ["backend/**", ".github/workflows/backend-tests.yml"]
+  pull_request:
+    paths: ["backend/**", ".github/workflows/backend-tests.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: restaurant_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d restaurant_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://test:test@localhost:5432/restaurant_test?sslmode=disable
+      TEST_REQUIRE_DB: "1" # без БД интеграционные тесты падают, а не пропускаются
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: go vet
+        run: go vet ./...
+      - name: Тесты (с детектором гонок)
+        run: go test ./... -race -count=1 -coverprofile=coverage.out
+      - name: Покрытие
+        run: go tool cover -func=coverage.out | tail -1
