@@ -2,7 +2,6 @@ package main
 
 import (
     "context"
-    "encoding/json"
     "log"
     "net/http"
     "os"
@@ -12,6 +11,7 @@ import (
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
     "github.com/go-chi/cors"
+    "github.com/jackc/pgx/v5/pgxpool"
     "github.com/joho/godotenv"
 
     "github.com/IIgiyuuII/restaurant/backend/internal/db"
@@ -37,70 +37,12 @@ func main() {
     }
     log.Println("connected to Supabase")
 
-    r := chi.NewRouter()
-    r.Use(middleware.Logger)
-    r.Use(cors.Handler(cors.Options{
-        AllowedOrigins: []string{"*"},
-        AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-        AllowedHeaders: []string{"*"},
-    }))
-
-    r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-        if err := pool.Ping(r.Context()); err != nil {
-            http.Error(w, "db down", 500)
-            return
-        }
-        w.Write([]byte("ok"))
-    })
-
-    r.Get("/api/products", func(w http.ResponseWriter, r *http.Request) {
-        rows, err := pool.Query(r.Context(),
-            "SELECT product_id, name, unit, total_quantity, nearest_expiry FROM product_stock ORDER BY name")
-        if err != nil {
-            http.Error(w, err.Error(), 500)
-            return
-        }
-        defer rows.Close()
-
-        out := []map[string]any{}
-        for rows.Next() {
-            var id, name, unit string
-            var qty float64
-            var nearest *string
-            _ = rows.Scan(&id, &name, &unit, &qty, &nearest)
-            out = append(out, map[string]any{
-                "id": id, "name": name, "unit": unit,
-                "quantity": qty, "nearest_expiry": nearest,
-            })
-        }
-        writeJSON(w, out)
-    })
-
-    r.Get("/api/stoplist", func(w http.ResponseWriter, r *http.Request) {
-        rows, err := pool.Query(r.Context(),
-            "SELECT dish_id, name, portions FROM dish_availability WHERE portions = 0 ORDER BY name")
-        if err != nil {
-            http.Error(w, err.Error(), 500)
-            return
-        }
-        defer rows.Close()
-
-        out := []map[string]any{}
-        for rows.Next() {
-            var id, name string
-            var portions int
-            _ = rows.Scan(&id, &name, &portions)
-            out = append(out, map[string]any{"id": id, "name": name, "portions": portions})
-        }
-        writeJSON(w, out)
-    })
-
     // Списание просрочки: фоновая проверка + ручное списание через API.
     expiry := services.NewExpiryService(pool, autoWriteOffInterval())
     go expiry.RunAutoWriteOff(ctx)
 
-    // Поставки, заказы (FEFO), меню, горячие предложения, пополнение, списания
-    handlers.New(pool, expiry).Mount(r)
+    // Все маршруты API (и CORS) собираются в newRouter — так их можно тестировать.
+    r := newRouter(pool, expiry)
 
     port := os.Getenv("PORT")
     if port == "" {
@@ -129,7 +71,18 @@ func autoWriteOffInterval() time.Duration {
     return d
 }
 
-func writeJSON(w http.ResponseWriter, v any) {
-    w.Header().Set("Content-Type", "application/json")
-    _ = json.NewEncoder(w).Encode(v)
+// newRouter собирает HTTP-роутер: логирование, CORS и все маршруты API.
+func newRouter(pool *pgxpool.Pool, expiry *services.ExpiryService) http.Handler {
+    r := chi.NewRouter()
+    r.Use(middleware.Logger)
+    r.Use(cors.Handler(cors.Options{
+        AllowedOrigins: []string{"*"},
+        AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+        AllowedHeaders: []string{"*"},
+    }))
+
+    // Здоровье, остатки, стоп-лист, поставки, заказы (FEFO), меню,
+    // горячие предложения, пополнение, списания.
+    handlers.New(pool, expiry).Mount(r)
+    return r
 }

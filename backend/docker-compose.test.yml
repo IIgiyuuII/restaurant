@@ -1,0 +1,21 @@
+# Одноразовая БД для интеграционных тестов бэкенда.
+#   docker compose -f docker-compose.test.yml up -d
+#   $env:TEST_DATABASE_URL = "postgresql://test:test@localhost:5433/restaurant_test?sslmode=disable"
+#   go test ./...
+#   docker compose -f docker-compose.test.yml down
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: restaurant_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data   # данные только в памяти — быстрее и ничего не остаётся на диске
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d restaurant_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
