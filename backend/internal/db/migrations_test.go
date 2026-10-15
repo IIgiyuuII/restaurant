@@ -49,6 +49,10 @@ func TestMigrations_EachStepAppliesIndependently(t *testing.T) {
 	if d.Count("batches") == 0 {
 		t.Fatal("после 000003 должны появиться партии")
 	}
+	d.ApplyStep(4)
+	if n := d.Int(`SELECT count(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'orders' AND column_name = 'revenue'`); n != 1 {
+		t.Fatal("после 000004 должна появиться колонка orders.revenue")
+	}
 }
 
 func TestSeed_Contents(t *testing.T) {

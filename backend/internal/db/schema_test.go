@@ -61,7 +61,7 @@ func TestSchema_Constraints(t *testing.T) {
 		{"расход ингредиента = 0", `INSERT INTO dish_ingredients VALUES ('` + dish + `', gen_random_uuid(), 0)`, checkViolation},
 		{"дубликат ингредиента в рецепте", `INSERT INTO dish_ingredients VALUES ('` + dish + `', '` + prod + `', 1)`, uniqueViolation},
 		{"неизвестный статус заказа", `UPDATE orders SET status = 'cooking'`, checkViolation},
-		{"позиция заказа с 0 порций", `INSERT INTO order_items VALUES ('` + order + `', '` + dish + `', 0)`, checkViolation},
+		{"позиция заказа с 0 порций", `INSERT INTO order_items (order_id, dish_id, quantity) VALUES ('` + order + `', '` + dish + `', 0)`, checkViolation},
 		{"неизвестный тип движения", `INSERT INTO stock_movements (batch_id, product_id, type, delta) VALUES ('` + batch + `', '` + prod + `', 'gift', 1)`, checkViolation},
 		{"поставку с партиями нельзя удалить", `DELETE FROM deliveries WHERE id = '` + delivery + `'`, fkViolation},
 		{"продукт с партиями нельзя удалить", `DELETE FROM products WHERE id = '` + prod + `'`, fkViolation},

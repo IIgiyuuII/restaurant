@@ -194,7 +194,7 @@ func TestCreateOrder_Created(t *testing.T) {
 		t.Fatalf("%+v", resp)
 	}
 	got := keys(t, []byte(rec.Body.String()))
-	wantKeys(t, got, "id", "number", "status", "created_at", "items", "write_offs")
+	wantKeys(t, got, "id", "number", "status", "created_at", "revenue", "revenue_estimated", "items", "write_offs")
 	for _, absent := range []string{"reason", "shortages"} {
 		if got[absent] {
 			t.Errorf("в ответе успешного заказа не должно быть %q (omitempty)", absent)
@@ -226,7 +226,7 @@ func TestCreateOrder_RejectedIs409WithReason(t *testing.T) {
 		t.Errorf("shortages: %+v", resp.Shortages)
 	}
 	got := keys(t, []byte(rec.Body.String()))
-	wantKeys(t, got, "id", "number", "status", "reason", "shortages", "items")
+	wantKeys(t, got, "id", "number", "status", "reason", "created_at", "revenue", "revenue_estimated", "shortages", "items")
 	if got["write_offs"] {
 		t.Error("в отказе не должно быть write_offs")
 	}

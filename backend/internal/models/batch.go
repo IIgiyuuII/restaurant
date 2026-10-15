@@ -19,16 +19,19 @@ type BatchStock struct {
 
 // OrderHistoryItem — позиция в истории заказов.
 type OrderHistoryItem struct {
-	Name     string `json:"name"`
-	Quantity int    `json:"quantity"`
+	Name      string  `json:"name"`
+	Quantity  int     `json:"quantity"`
+	UnitPrice float64 `json:"unit_price"`
 }
 
 // OrderHistory — заказ в списке последних заказов.
 type OrderHistory struct {
-	ID        string             `json:"id"`
-	Number    int64              `json:"number"`
-	Status    string             `json:"status"`
-	Reason    string             `json:"reason,omitempty"`
-	CreatedAt time.Time          `json:"created_at"`
-	Items     []OrderHistoryItem `json:"items"`
+	ID               string             `json:"id"`
+	Number           int64              `json:"number"`
+	Status           string             `json:"status"`
+	Reason           string             `json:"reason,omitempty"`
+	CreatedAt        time.Time          `json:"created_at"`
+	Revenue          float64            `json:"revenue"`
+	RevenueEstimated bool               `json:"revenue_estimated"`
+	Items            []OrderHistoryItem `json:"items"`
 }

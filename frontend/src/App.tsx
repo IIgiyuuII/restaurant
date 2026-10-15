@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CSSProperties } from 'react';
 
 import Sidebar, { tabFromHash } from './components/Sidebar';
 import Header from './components/Header';
-import StatCard from './components/StatCard';
 import StockTable from './components/StockTable';
 import StopList from './components/StopList';
 import OrdersPage from './components/OrdersPage';
@@ -11,11 +9,9 @@ import HotOffersPage from './components/HotOffersPage';
 import HotOfferCard from './components/HotOfferCard';
 import DeliveryPage from './components/DeliveryPage';
 import WriteoffsPage from './components/WriteoffsPage';
-import DonutChart from './components/DonutChart';
 import Background from './components/Background';
-import Icon from './components/Icons';
 import ErrorBanner from './components/ErrorBanner';
-import SectionTitle from './components/SectionTitle';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 
 import { api, errorMessage } from './api';
 import type {
@@ -29,7 +25,7 @@ import type {
   RestockItem,
   StopDish,
 } from './types';
-import { hoursUntil, plural } from './utils';
+import { hoursUntil } from './utils';
 
 // Пока нет SSE — обновляем данные опросом.
 const POLL_MS = 10_000;
@@ -155,107 +151,16 @@ export default function App() {
           )}
 
           {loaded && tab === 'dashboard' && (
-            <div className="stagger space-y-8">
-              <div className="stagger no-stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-                <StatCard
-                  label="Продуктов"
-                  value={products.length}
-                  hint="всего в наличии"
-                  accent="neutral"
-                  icon="box"
-                  onClick={() => setTab('stock')}
-                />
-                <StatCard
-                  label="Нет в наличии"
-                  value={emptyProducts}
-                  hint="партий нет или закончились"
-                  accent={emptyProducts > 0 ? 'slate' : 'green'}
-                  icon="ban"
-                  onClick={() => setTab('stock')}
-                />
-                <StatCard
-                  label="Партий истекает <24ч"
-                  value={expiringSoon}
-                  hint={
-                    expired > 0
-                      ? `и ещё ${expired} просрочено — нужно списать`
-                      : 'нужно срочно использовать'
-                  }
-                  accent={expiringSoon > 0 ? 'orange' : 'green'}
-                  icon="clock"
-                  onClick={() => setTab(expired > 0 ? 'writeoffs' : 'stock')}
-                />
-                <StatCard
-                  label="В стоп-листе"
-                  value={stoplist.length}
-                  hint="позиций"
-                  accent={stoplist.length > 0 ? 'indigo' : 'green'}
-                  icon="flame"
-                  onClick={() => setTab('stoplist')}
-                />
-              </div>
-
-              {hotOffers.length > 0 && (
-                <section className="no-stagger">
-                  <SectionTitle icon="flame" action={{ label: 'Все предложения', onClick: () => setTab('hot') }}>
-                    Горячие предложения
-                  </SectionTitle>
-                  <div
-                    className="stagger grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3"
-                    style={{ '--stagger-base': '160ms' } as CSSProperties}
-                  >
-                    {hotOffers.slice(0, 3).map((o, i) => (
-                      // Третья карточка — только на очень широких экранах, чтобы сетка из 2 колонок не оставляла дыру.
-                      <div key={o.dish_id} className={i === 2 ? 'max-2xl:hidden' : undefined}>
-                        <HotOfferCard
-                          offer={o}
-                          rank={i + 1}
-                          topScore={hotOffers[0].score}
-                          inCart={cart[o.dish_id] ?? 0}
-                          onAdd={() => addToCart(o)}
-                          compact
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              <section>
-                <StopList dishes={stoplist} compact onAll={() => setTab('stoplist')} />
-              </section>
-
-              <section>
-                <SectionTitle
-                  icon="trash"
-                  action={{ label: 'Подробнее', onClick: () => setTab('writeoffs') }}
-                >
-                  Списания за {report?.days ?? 30} дн.
-                </SectionTitle>
-                <div className="bg-surface rounded-2xl border border-gray-800 p-4 sm:p-5">
-                  {report && report.total_batches > 0 ? (
-                    <DonutChart
-                      slices={report.by_product.map((s) => ({ label: s.name, value: s.batches }))}
-                      centerValue={report.total_batches}
-                      centerLabel={plural(report.total_batches, ['партия', 'партии', 'партий'])}
-                      formatValue={(v) => `${v} ${plural(v, ['партия', 'партии', 'партий'])}`}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
-                      <Icon name="checkCircle" size={18} className="text-emerald-400" />
-                      Просрочку не списывали — потерь нет
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <section>
-                <SectionTitle icon="box" action={{ label: 'Все остатки', onClick: () => setTab('stock') }}>
-                  Остатки
-                </SectionTitle>
-                <StockTable products={products} batches={batches} />
-              </section>
-            </div>
+            <AnalyticsDashboard
+              products={products}
+              stoplist={stoplist}
+              batches={batches}
+              history={history}
+              hotOffers={hotOffers}
+              restock={restock}
+              report={report}
+              onNavigate={selectTab}
+            />
           )}
 
           <div

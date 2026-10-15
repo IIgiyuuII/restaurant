@@ -81,16 +81,17 @@ func (s *OrderService) Create(ctx context.Context, req models.CreateOrderRequest
 
 	for _, it := range items {
 		var dishName string
+		var dishPrice float64
 		err := tx.QueryRow(ctx,
-			`SELECT name FROM dishes WHERE id = $1::uuid AND is_active`, it.DishID,
-		).Scan(&dishName)
+			`SELECT name, price::float8 FROM dishes WHERE id = $1::uuid AND is_active`, it.DishID,
+		).Scan(&dishName, &dishPrice)
 		if errors.Is(err, pgx.ErrNoRows) || pgCode(err) == pgInvalidText {
 			return nil, validation("блюдо %q не найдено или снято с продажи", it.DishID)
 		}
 		if err != nil {
 			return nil, err
 		}
-		views = append(views, models.OrderItemView{DishID: it.DishID, Name: dishName, Quantity: it.Quantity})
+		views = append(views, models.OrderItemView{DishID: it.DishID, Name: dishName, Quantity: it.Quantity, UnitPrice: dishPrice})
 
 		if err := addRecipeNeeds(ctx, tx, needs, it, dishName); err != nil {
 			return nil, err
@@ -148,8 +149,12 @@ func (s *OrderService) Create(ctx context.Context, req models.CreateOrderRequest
 
 	// ---- 3. Успех: заказ, списание, журнал ----
 	resp := &models.OrderResponse{Status: StatusCreated, Items: views}
+	for _, item := range views {
+		resp.Revenue += item.UnitPrice * float64(item.Quantity)
+	}
 	err = tx.QueryRow(ctx,
-		`INSERT INTO orders (status) VALUES ('created') RETURNING id, number, created_at`,
+		`INSERT INTO orders (status, revenue, revenue_estimated) VALUES ('created', $1, false) RETURNING id, number, created_at`,
+		resp.Revenue,
 	).Scan(&resp.ID, &resp.Number, &resp.CreatedAt)
 	if err != nil {
 		return nil, err
@@ -293,8 +298,8 @@ func lockLiveBatches(ctx context.Context, tx pgx.Tx, productID string) ([]locked
 func insertOrderItems(ctx context.Context, tx pgx.Tx, orderID string, views []models.OrderItemView) error {
 	for _, v := range views {
 		_, err := tx.Exec(ctx,
-			`INSERT INTO order_items (order_id, dish_id, quantity) VALUES ($1::uuid, $2::uuid, $3)`,
-			orderID, v.DishID, v.Quantity)
+			`INSERT INTO order_items (order_id, dish_id, quantity, unit_price) VALUES ($1::uuid, $2::uuid, $3, $4)`,
+			orderID, v.DishID, v.Quantity, v.UnitPrice)
 		if err != nil {
 			return err
 		}

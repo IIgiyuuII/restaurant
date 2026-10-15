@@ -23,7 +23,7 @@ export default function StopList({ dishes, compact, onAll }: Props) {
 
   const rows = compact ? dishes.slice(0, COMPACT_LIMIT) : dishes;
   const hidden = dishes.length - rows.length;
-  // Необязательные колонки появляются, только если бэкенд присылает эти поля.
+  // Дополнительные поля отображаются только при наличии данных от API.
   const hasCategory = dishes.some((d) => d.category);
   const hasDate = dishes.some((d) => d.stopped_at);
 
@@ -48,13 +48,12 @@ export default function StopList({ dishes, compact, onAll }: Props) {
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[420px] text-sm">
+        <table className="w-full min-w-[520px] text-sm">
           <thead>
             <tr className="bg-inset text-left text-xs text-gray-500">
               <th className="rounded-l-xl px-4 py-2.5 font-medium">Наименование</th>
               {hasCategory && <th className="px-4 py-2.5 font-medium">Категория</th>}
-              <th className="px-4 py-2.5 font-medium">Причина</th>
-              <th className={'px-4 py-2.5 font-medium ' + (hasDate ? '' : 'rounded-r-xl')}>Порции</th>
+              <th className={'px-4 py-2.5 font-medium ' + (hasDate ? '' : 'rounded-r-xl')}>Чего не хватает</th>
               {hasDate && <th className="rounded-r-xl px-4 py-2.5 font-medium">Дата</th>}
             </tr>
           </thead>
@@ -63,8 +62,13 @@ export default function StopList({ dishes, compact, onAll }: Props) {
               <tr key={d.id} className="border-b border-gray-900 last:border-0">
                 <td className="px-4 py-3 font-medium text-gray-100">{d.name}</td>
                 {hasCategory && <td className="px-4 py-3 text-gray-400">{d.category ?? '—'}</td>}
-                <td className="px-4 py-3 text-gray-400">{d.reason ?? 'Нет ингредиентов'}</td>
-                <td className="px-4 py-3 text-gray-400">{d.portions}</td>
+                <td className="px-4 py-3 text-gray-300">
+                  <span className="inline-flex items-start gap-2 rounded-lg border border-gray-700/70 bg-inset px-3 py-2 text-xs font-medium leading-relaxed text-gray-300">
+                    <span>
+                      {d.reason || 'Недостаточно доступных ингредиентов для приготовления.'}
+                    </span>
+                  </span>
+                </td>
                 {hasDate && <td className="px-4 py-3 whitespace-nowrap text-gray-400">{d.stopped_at ? formatDate(d.stopped_at) : '—'}</td>}
               </tr>
             ))}

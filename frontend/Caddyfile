@@ -1,0 +1,26 @@
+# Раздача собранного сайта (Vite SPA). Слушает порт из переменной PORT (её выдаёт Railway).
+# ":порт" без имени хоста: Caddy слушает на всех доступных адресах (IPv4 и IPv6, если он есть)
+# и не включает автоматический HTTPS — шифрование делает Railway на своём краю.
+{
+	admin off
+}
+
+:{$PORT:8080} {
+	root * /srv
+	encode gzip
+
+	# Файлы Vite лежат под хешами в имени — кешируем «навсегда». Несуществующий файл — честный 404.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	handle @assets {
+		file_server
+	}
+
+	# Всё остальное: index.html без кеша (иначе после деплоя видна старая версия).
+	# Навигация у вас на хешах (#/...), но fallback безвреден и спасает прямые ссылки.
+	handle {
+		header Cache-Control "no-store"
+		try_files {path} /index.html
+		file_server
+	}
+}

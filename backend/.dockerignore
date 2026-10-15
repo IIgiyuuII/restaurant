@@ -1,0 +1,16 @@
+# Секреты и локальные файлы — никогда не должны попасть в образ
+.env
+.env.*
+!.env.example
+
+# Не нужны для сборки бинарника
+*.test
+coverage.out
+cover.out
+docker-compose.test.yml
+Dockerfile
+.dockerignore
+.git
+.gitignore
+bin/
+tmp/
