@@ -13,7 +13,6 @@
 |------|------------|
 | Backend | Go (см. `backend/go.mod`), chi/v5, pgx/v5, golang-migrate |
 | Frontend | React 19 + TypeScript + Vite + Tailwind CSS v4 + axios |
-| Mobile | Expo / React Native + TypeScript + axios |
 | БД | PostgreSQL 17 (Supabase, Session Pooler) |
 | Тесты | Go `testing`, PostgreSQL в Docker, изолированные схемы |
 | CI | GitHub Actions (`.github/workflows/backend-tests.yml`) |
@@ -55,10 +54,6 @@
 - [x] Раздел списаний: ручное списание и аналитика
 - [x] Тёмная тема, сайдбар, hash-based навигация, адаптивная вёрстка
 
-### Mobile (Expo / React Native)
-
-- [x] Дашборд, остатки, стоп-лист, горячие предложения, заказы
-- [x] Axios-клиент к тому же API
 
 ## Структура проекта
 
@@ -98,7 +93,6 @@ restaurant/
 │   ├── Caddyfile                         # раздача статики с gzip и SPA-fallback
 │   ├── .dockerignore
 │   └── package.json
-├── mobile/                               # Expo / React Native
 ├── DEPLOY.md                             # инструкция деплоя на Railway
 ├── .env.example
 ├── .gitignore
@@ -149,15 +143,6 @@ npm run dev
 
 Vite поднимет `http://localhost:5173`.
 
-### 4. Mobile
-
-```powershell
-cd mobile
-npm ci
-npm start
-```
-
-Дальше — инструкции Expo. Для запуска на телефоне укажи в `mobile/src/api.ts` **IP компьютера** в локальной сети, а не `localhost`.
 
 ## API
 
@@ -365,7 +350,6 @@ git push -u origin feature/my-task
 - [x] Локальный запуск тестовой БД через Docker Compose
 - [x] GitHub Actions workflow: `go vet`, `go test -race`, покрытие
 - [x] Web frontend с дашбордом, формами и аналитикой
-- [x] Mobile-приложение (Expo / React Native)
 - [x] Деплой backend и frontend на Railway
 - [x] Supabase как production БД
 
