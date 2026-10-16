@@ -49,7 +49,6 @@ export default function Sidebar({ active, onChange, open, onClose, badges = {} }
           </span>
           <div className="min-w-0">
             <div className="text-lg font-bold leading-tight tracking-tight text-gray-100">Restaurant</div>
-            <div className="truncate text-xs text-gray-500">Inventory & Stop-list</div>
           </div>
         </div>
 
@@ -87,12 +86,7 @@ export default function Sidebar({ active, onChange, open, onClose, badges = {} }
           })}
         </nav>
 
-        <div className="p-4">
-          <div className="flex items-center gap-2.5 rounded-xl border border-gray-800 bg-inset px-3 py-2.5 text-xs text-gray-500">
-            <Icon name="sparkles" size={16} className="text-accent-text" />
-            Hackathon build · v0.2
-          </div>
-        </div>
+       
       </aside>
     </>
   );
