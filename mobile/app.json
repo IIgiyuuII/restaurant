@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "FreshFlow",
+    "slug": "restaurant-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "restaurant",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#090c24",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#090c24"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.iigiyuuii.restaurant"
+    },
+    "android": {
+      "package": "com.iigiyuuii.restaurant",
+      "adaptiveIcon": {
+        "backgroundColor": "#4f46e5",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#6366f1",
+          "defaultChannel": "expiry"
+        }
+      ],
+      "expo-background-task",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#090c24",
+          "resizeMode": "contain"
+        }
+      ]
+    ]
+  }
+}
