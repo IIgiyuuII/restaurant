@@ -5,6 +5,7 @@
 > **Демо:**
 > - Web: https://magnificent-trust-production-062b.up.railway.app/
 > - API: https://restaurant-production-2e70.up.railway.app/health
+> - Мобильное приложение **FreshFlow** (Android): сборка APK — см. [`mobile/INSTALL_ANDROID.md`](mobile/INSTALL_ANDROID.md)
 > - Репозиторий: https://github.com/IIgiyuuII/restaurant
 
 ## Стек
@@ -13,9 +14,10 @@
 |------|------------|
 | Backend | Go (см. `backend/go.mod`), chi/v5, pgx/v5, golang-migrate |
 | Frontend | React 19 + TypeScript + Vite + Tailwind CSS v4 + axios |
+| Mobile | Expo SDK 57 + React Native 0.86 + TypeScript, react-native-svg, expo-notifications, expo-background-task, AsyncStorage |
 | БД | PostgreSQL 17 (Supabase, Session Pooler) |
-| Тесты | Go `testing`, PostgreSQL в Docker, изолированные схемы |
-| CI | GitHub Actions (`.github/workflows/backend-tests.yml`) |
+| Тесты | Go `testing`, PostgreSQL в Docker, изолированные схемы; логика уведомлений мобилки — `tsx` |
+| CI | GitHub Actions (`backend-tests.yml`, `mobile-checks.yml`) |
 | CD | Railway (backend + frontend), Supabase как основная БД |
 
 ## Что реализовано
@@ -54,12 +56,24 @@
 - [x] Раздел списаний: ручное списание и аналитика
 - [x] Тёмная тема, сайдбар, hash-based навигация, адаптивная вёрстка
 
+### Mobile (FreshFlow, Android / iOS)
+
+- [x] Те же 7 разделов, что в вебе: дашборд, остатки, стоп-лист, горячие предложения, заказы, поставка, списание
+- [x] Дизайн веба: индиго-«стекло», светлая / тёмная / системная тема, шрифт Inter, графики на `react-native-svg`
+- [x] Навигация через выдвижное меню (бургер) со счётчиками, pull-to-refresh, автообновление раз в 10 с
+- [x] Онбординг при первом запуске с предложением включить уведомления
+- [x] **Уведомления о важных событиях** (см. ниже)
+- [x] Настройки: тема, уведомления по типам, адрес сервера с проверкой `/health`
+- [x] Те же правила валидации формы поставки и обработка отказов заказа (409), что в вебе
+- [x] Сборка APK локально (Android Studio) или в облаке (EAS), CI-проверка кода
 
 ## Структура проекта
 
 ```
 restaurant/
-├── .github/workflows/backend-tests.yml   # CI: go vet + go test -race + coverage
+├── .github/workflows/
+│   ├── backend-tests.yml                 # CI: go vet + go test -race + coverage
+│   └── mobile-checks.yml                 # CI: tsc + тесты уведомлений + сборка бандла
 ├── backend/
 │   ├── cmd/api/main.go                   # точка входа, роутер, CORS, автосписание
 │   ├── internal/
@@ -93,6 +107,23 @@ restaurant/
 │   ├── Caddyfile                         # раздача статики с gzip и SPA-fallback
 │   ├── .dockerignore
 │   └── package.json
+├── mobile/
+│   ├── App.tsx, index.ts                 # корень приложения; index.ts регистрирует фоновую задачу
+│   ├── app.json, eas.json                # конфиг Expo и профили сборки (preview → .apk)
+│   ├── INSTALL_ANDROID.md                # как собрать APK и установить на телефон
+│   └── src/
+│       ├── api.ts, config.ts             # axios, адрес API, проверка сервера
+│       ├── storage.ts, types.ts, utils.ts
+│       ├── theme/                        # палитра веба, светлая/тёмная/системная тема, шрифты
+│       ├── ui/                           # Txt, Panel, Button, Sheet, Select, Field, charts/
+│       ├── components/                   # Header, Drawer (меню), SettingsSheet, nav
+│       ├── screens/                      # 7 разделов + OnboardingScreen
+│       ├── hooks/useData.ts              # опрос API раз в 10 с, пока приложение на экране
+│       └── notifications/
+│           ├── events.ts                 # чистая логика: что считать событием (+ events.test.ts)
+│           ├── engine.ts                 # данные → события → уведомления
+│           ├── notify.ts, background.ts  # expo-notifications, фоновая задача
+│           └── NotificationsProvider.tsx, prefs.ts
 ├── DEPLOY.md                             # инструкция деплоя на Railway
 ├── .env.example
 ├── .gitignore
@@ -109,6 +140,8 @@ PORT=8081
 AUTO_WRITEOFF_INTERVAL=15m
 ```
 > `AUTO_WRITEOFF_INTERVAL=0` или `off` выключает фоновое списание просрочки.
+
+Мобильное приложение: `EXPO_PUBLIC_API_URL` (адрес Go-API с `/api`, по умолчанию уже указан продовый) — см. `mobile/.env.example`.
 
 ## Локальный запуск
 
@@ -143,6 +176,59 @@ npm run dev
 
 Vite поднимет `http://localhost:5173`.
 
+### 4. Мобильное приложение
+
+```powershell
+cd mobile
+npm ci
+npm start          # QR-код → приложение Expo Go на телефоне
+```
+
+По умолчанию приложение работает с продовым API на Railway. Чтобы направить его на локальный бэкенд, задай `EXPO_PUBLIC_API_URL` в `mobile/.env`
+(реальный телефон — IP компьютера в сети, эмулятор Android — `10.0.2.2`, например `http://192.168.0.10:8081/api`).
+Адрес можно сменить и без пересборки: аватар → Настройки → Сервер.
+
+Проверки:
+
+```powershell
+npm run typecheck   # tsc
+npm test            # тесты логики уведомлений
+```
+
+## Сборка APK и установка на Android
+
+Подробная инструкция — [`mobile/INSTALL_ANDROID.md`](mobile/INSTALL_ANDROID.md). Кратко, локально через Android Studio:
+
+```powershell
+cd mobile
+npm ci
+npx expo prebuild --platform android
+cd android
+.\gradlew.bat assembleRelease        # нужны JAVA_HOME (JDK 17) и ANDROID_HOME
+# APK: android\app\build\outputs\apk\release\app-release.apk
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r app\build\outputs\apk\release\app-release.apk
+```
+
+Без Android Studio, в облаке: `eas build -p android --profile preview` (нужен бесплатный аккаунт Expo).
+Папка `mobile/android/` генерируется и в git не попадает.
+
+## Уведомления в мобильном приложении
+
+Включаются при первом запуске (онбординг) или в Настройках; можно отключать по типам. Тап по уведомлению открывает нужный раздел.
+
+| Тип | Когда | Как доставляется |
+|---|---|---|
+| Срок годности | за 24 ч до конца и когда срок вышел | планируется на точное время — срабатывает и при закрытом приложении |
+| Стоп-лист | блюдо ушло в стоп-лист | при открытом приложении + фоновая проверка |
+| Закупка | продукт закончился | то же |
+| Горячие предложения | появилось срочное предложение | то же |
+| Заказы | заказ отклонён (в т.ч. с другого устройства) | то же |
+
+Защита от спама: первый запуск ничего не шлёт, одно событие не чаще раза в 6 часов, пачка событий сворачивается в одно уведомление.
+
+**Ограничения.** Фоновая проверка (`expo-background-task`) идёт не чаще раза в 15 минут и на усмотрение ОС: на iOS реже,
+после принудительного закрытия приложения не работает, на Android зависит от режима экономии батареи. Поэтому уведомления о стоп-листе,
+закупке и горячих предложениях не мгновенные. Мгновенными их сделает серверный push (Expo Push + хранение токенов и отправка в Go-бэкенде) — в планах.
 
 ## API
 
@@ -164,9 +250,9 @@ Vite поднимет `http://localhost:5173`.
 Примеры:
 
 ```powershell
-Invoke-RestMethod https://restaurant-api-production.up.railway.app/health
-Invoke-RestMethod https://restaurant-api-production.up.railway.app/api/products
-Invoke-RestMethod https://restaurant-api-production.up.railway.app/api/dishes
+Invoke-RestMethod https://restaurant-production-2e70.up.railway.app/health
+Invoke-RestMethod https://restaurant-production-2e70.up.railway.app/api/products
+Invoke-RestMethod https://restaurant-production-2e70.up.railway.app/api/dishes
 ```
 
 ### Создание поставки
@@ -294,6 +380,8 @@ Remove-Item Env:TEST_REQUIRE_DB -ErrorAction SilentlyContinue
 
 ## CI в GitHub Actions
 
+### backend-tests
+
 Workflow: `.github/workflows/backend-tests.yml`. На `push` и `pull_request` (при изменениях в `backend/**` или в самом workflow):
 
 1. Поднимает временный PostgreSQL 17 service container.
@@ -307,6 +395,11 @@ Workflow: `.github/workflows/backend-tests.yml`. На `push` и `pull_request` (
 
 CI не требует Supabase secrets — использует свою временную БД.
 
+### mobile-checks
+
+Workflow: `.github/workflows/mobile-checks.yml`. На `push` и `pull_request` при изменениях в `mobile/**`:
+`npm ci` → `npm run typecheck` (tsc) → `npm test` (логика уведомлений) → `npx expo export --platform android` (бандл собирается).
+
 ## Деплой
 
 Backend и frontend живут на **Railway** (два сервиса из одного репозитория), БД — на **Supabase**.
@@ -315,8 +408,7 @@ Backend и frontend живут на **Railway** (два сервиса из од
 - Frontend: `frontend/Dockerfile` + `frontend/Caddyfile` (сборка Vite + раздача статики Caddy).
 - Railway следит за веткой **`dev`** и деплоит при push.
 - `VITE_API_URL` для фронта вшивается на этапе сборки — адрес бэкенда + `/api`.
-
-
+- Мобильное приложение не деплоится на Railway: APK собирается локально или через EAS и устанавливается на телефон.
 
 ## Правила работы в команде
 
@@ -350,8 +442,11 @@ git push -u origin feature/my-task
 - [x] Локальный запуск тестовой БД через Docker Compose
 - [x] GitHub Actions workflow: `go vet`, `go test -race`, покрытие
 - [x] Web frontend с дашбордом, формами и аналитикой
+- [x] Мобильное приложение FreshFlow (Android) с уведомлениями и онбордингом
 - [x] Деплой backend и frontend на Railway
 - [x] Supabase как production БД
+- [ ] Серверный push-уведомления (мгновенные, при закрытом приложении)
+- [ ] Сборка под iOS (нужен Apple Developer аккаунт)
 
 
 ## Полезные ссылки
@@ -360,3 +455,4 @@ git push -u origin feature/my-task
 - Supabase Dashboard: https://supabase.com/dashboard
 - Railway: https://railway.com
 - golang-migrate: https://github.com/golang-migrate/migrate
+- Expo / EAS Build: https://docs.expo.dev/build/introduction/
