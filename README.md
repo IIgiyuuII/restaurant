@@ -445,8 +445,6 @@ git push -u origin feature/my-task
 - [x] Мобильное приложение FreshFlow (Android) с уведомлениями и онбордингом
 - [x] Деплой backend и frontend на Railway
 - [x] Supabase как production БД
-- [ ] Серверный push-уведомления (мгновенные, при закрытом приложении)
-- [ ] Сборка под iOS (нужен Apple Developer аккаунт)
 
 
 ## Полезные ссылки
